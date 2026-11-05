@@ -98,5 +98,25 @@
     "yearOfStudy": "",
     "availability": "",
     "selfIntro": ""
+  },
+  {
+    "userId": "00000000-0000-0000-0000-000000000106",
+    "fullName": "Sun Ruiyang",
+    "gender": "Other",
+    "degree": "Master",
+    "major": "Computer Science",
+    "studentId": "2023213488",
+    "idCard": "371724200505080019",
+    "phone": "+8619963907285",
+    "email": "markrivera683@bupt.edu.cn",
+    "educationJson": "[{\"school\":\"BUPT International School\",\"degree\":\"Master\",\"major\":\"Computer Science\",\"period\":\"2024-2027\"},{\"school\":\"BUPT\",\"degree\":\"B.Sc\",\"major\":\"Computer Science\",\"period\":\"2023-2027\"}]",
+    "courses": "Data Structures\nObject-Oriented Programming\nSoftware Engineering\nDatabase Systems\nComputer Networks\nOperating Systems\nIntroduction to Algorithms",
+    "freeTime": "Monday 14:00-17:00\nWednesday 09:00-12:00\nFriday 15:00-18:00",
+    "skills": "Java, Python, C Programming, Git, Communication, Problem Solving, Teaching Assistance",
+    "cvFileName": "孙瑞阳-个人简历.pdf",
+    "degreeProgramme": "",
+    "yearOfStudy": "",
+    "availability": "",
+    "selfIntro": "Master student in Computer Science with lab and tutorial support experience. Comfortable assisting with programming assignments, code reviews, and student Q&A sessions."
   }
 ]

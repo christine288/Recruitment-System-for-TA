@@ -11,9 +11,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Computes TA workload stats for admin dashboards and MO approval advice. */
+/**
+ * Computes TA workload statistics and module-organiser (MO) approval snapshots.
+ * <p>
+ * Aggregates application counts and position lists per TA user for admin dashboards, and
+ * builds {@link MoWorkloadSnapshot} views for pending applications so MOs (and AI advice)
+ * can assess whether approving another role would overload an applicant.
+ */
 public final class WorkloadService {
 
+    /**
+     * Builds per-TA workload counters from registered TA users and their applications.
+     * <p>
+     * Only users with role {@link Roles#TA} receive stats rows. Applications increment
+     * total, accepted, rejected, or pending counts and append formatted position lines.
+     *
+     * @param users   all users (typically from {@link AuthService#listAllUsers()})
+     * @param appList all applications to aggregate; may be {@code null}
+     * @return map keyed by TA user id to {@link TaWorkloadStats}; never {@code null}
+     */
     public Map<String, TaWorkloadStats> buildTaWorkloadStats(List<User> users, List<Application> appList) {
         Map<String, TaWorkloadStats> taWorkload = new HashMap<>();
         if (users != null) {
@@ -53,6 +69,19 @@ public final class WorkloadService {
         return taWorkload;
     }
 
+    /**
+     * Builds a workload snapshot for a single pending application.
+     * <p>
+     * Returns {@code null} when the application id is invalid, the application is not found,
+     * or its status is not {@code Pending}. The snapshot includes accepted and pending
+     * positions for the same applicant plus estimated hours from job postings.
+     *
+     * @param applicationId id of the pending application under review
+     * @param applications  full application list to scan for the target and sibling rows
+     * @param jobs          job postings used to resolve workload hours by module code
+     * @param applicantName display name for the applicant; falls back to user id when blank
+     * @return snapshot for MO review, or {@code null} when not applicable
+     */
     public MoWorkloadSnapshot buildSnapshotForApplication(
             String applicationId,
             List<Application> applications,
@@ -110,6 +139,17 @@ public final class WorkloadService {
         return snapshot;
     }
 
+    /**
+     * Builds workload snapshots for every pending application in the list.
+     * <p>
+     * Keys the result map by application id. Applicant names are resolved from
+     * {@code applicantNamesByUserId} when provided.
+     *
+     * @param applications            applications to evaluate (only Pending rows produce snapshots)
+     * @param jobs                    job postings for hour lookup
+     * @param applicantNamesByUserId  optional map from user id to display name
+     * @return map of application id to snapshot; empty when input list is {@code null}
+     */
     public Map<String, MoWorkloadSnapshot> buildSnapshotsForPendingApplications(
             List<Application> applications,
             List<Job> jobs,

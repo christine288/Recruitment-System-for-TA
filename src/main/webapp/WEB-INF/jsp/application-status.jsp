@@ -151,6 +151,7 @@
           <div class="withdraw-btn">
             <form method="post" action="<%= ctx %>/applications"
                   onsubmit="return confirm('Withdraw this application?');">
+              <input type="hidden" name="csrfToken" value="<%= com.bupt.ta.security.CsrfFilter.csrfToken(request) %>" />
               <input type="hidden" name="action" value="withdraw" />
               <input type="hidden" name="appId"  value="<%= a.id != null ? a.id : "" %>" />
               <button type="submit" class="btn-withdraw">Withdraw</button>

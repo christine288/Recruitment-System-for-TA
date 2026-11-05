@@ -1,0 +1,9 @@
+com.bupt.ta.ai
+com.bupt.ta.model
+com.bupt.ta.persistence
+com.bupt.ta.security
+com.bupt.ta.service
+com.bupt.ta.service.admin
+com.bupt.ta.service.ai
+com.bupt.ta.servlet
+com.bupt.ta.util

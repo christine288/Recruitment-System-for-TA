@@ -48,67 +48,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Applicant Profile - MO View</title>
   <link rel="stylesheet" href="${pageContext.request.contextPath}/static/css/app.css" />
-  <style>
-    .profile-view-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 2rem 3rem;
-    }
-    @media (min-width: 768px) {
-      .profile-view-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-    .readonly-list {
-      display: grid;
-      gap: 1rem;
-    }
-    .readonly-item label {
-      display: block;
-      margin-bottom: .35rem;
-      font-size: .875rem;
-      font-weight: 600;
-      color: #475569;
-    }
-    .readonly-value {
-      min-height: 44px;
-      padding: .75rem .875rem;
-      border: 1px solid #dbe3ee;
-      border-radius: 12px;
-      background: #f8fafc;
-      color: #0f172a;
-      line-height: 1.5;
-      word-break: break-word;
-    }
-    .readonly-value--multiline {
-      min-height: 108px;
-    }
-    .muted {
-      color: #64748b;
-    }
-    .edu-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .edu-table th,
-    .edu-table td {
-      padding: .75rem;
-      border-bottom: 1px solid #e2e8f0;
-      text-align: left;
-      vertical-align: top;
-    }
-    .edu-table th {
-      font-size: .875rem;
-      color: #475569;
-      background: #f8fafc;
-    }
-    .toolbar {
-      display: flex;
-      gap: .75rem;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-  </style>
 </head>
 <body>
 <div class="page--top fade-in">
@@ -116,16 +55,16 @@
     <div class="page-header-row">
       <div class="header-left">
         <div class="logo">
-          <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
         <div>
           <h1 class="page-title">Applicant Profile</h1>
           <p class="page-subtitle">
-            Read-only profile view for <strong><%= h(applicantName == null ? "Applicant" : applicantName) %></strong>
+            Read-only view for <strong><%= h(applicantName == null ? "Applicant" : applicantName) %></strong>
           </p>
         </div>
       </div>
-      <div class="toolbar">
+      <div class="mo-pending-links">
         <a class="link-pill" href="${pageContext.request.contextPath}/mo">
           <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
           Back to Dashboard
@@ -143,62 +82,62 @@
       </div>
     </div>
 
-    <div class="card" style="padding:1.5rem 2.5rem;">
-      <div class="alert alert-info">
-        This page is view-only for module organisers. Use the applicant's CV link when you need the original document.
+    <div class="card mo-section">
+      <div class="alert alert-info" style="margin-bottom:1.5rem;">
+        This page is view-only for module organisers. Use the CV link when you need the original document.
       </div>
 
-      <div class="profile-view-grid">
+      <div class="mo-profile-grid">
         <div style="display:flex;flex-direction:column;gap:1rem;">
           <h3 class="section-heading">Personal Information</h3>
 
-          <div class="readonly-list">
-            <div class="readonly-item">
+          <div class="mo-readonly-list">
+            <div class="mo-readonly-item">
               <label>Full Name</label>
-              <div class="readonly-value"><%= valueOrMuted(p.fullName) %></div>
+              <div class="mo-readonly-value"><%= valueOrMuted(p.fullName) %></div>
             </div>
 
             <div class="grid-2col" style="gap:.75rem 1rem;">
-              <div class="readonly-item">
+              <div class="mo-readonly-item">
                 <label>Gender</label>
-                <div class="readonly-value"><%= valueOrMuted(p.gender) %></div>
+                <div class="mo-readonly-value"><%= valueOrMuted(p.gender) %></div>
               </div>
-              <div class="readonly-item">
+              <div class="mo-readonly-item">
                 <label>Degree</label>
-                <div class="readonly-value"><%= valueOrMuted(p.degree) %></div>
+                <div class="mo-readonly-value"><%= valueOrMuted(p.degree) %></div>
               </div>
             </div>
 
             <div class="grid-2col" style="gap:.75rem 1rem;">
-              <div class="readonly-item">
+              <div class="mo-readonly-item">
                 <label>Major</label>
-                <div class="readonly-value"><%= valueOrMuted(p.major) %></div>
+                <div class="mo-readonly-value"><%= valueOrMuted(p.major) %></div>
               </div>
-              <div class="readonly-item">
+              <div class="mo-readonly-item">
                 <label>Student ID</label>
-                <div class="readonly-value"><%= valueOrMuted(p.studentId) %></div>
+                <div class="mo-readonly-value"><%= valueOrMuted(p.studentId) %></div>
               </div>
             </div>
 
             <div class="grid-2col" style="gap:.75rem 1rem;">
-              <div class="readonly-item">
+              <div class="mo-readonly-item">
                 <label>Phone</label>
-                <div class="readonly-value"><%= valueOrMuted(p.phone) %></div>
+                <div class="mo-readonly-value"><%= valueOrMuted(p.phone) %></div>
               </div>
-              <div class="readonly-item">
+              <div class="mo-readonly-item">
                 <label>Email</label>
-                <div class="readonly-value"><%= valueOrMuted(p.email) %></div>
+                <div class="mo-readonly-value"><%= valueOrMuted(p.email) %></div>
               </div>
             </div>
 
-            <div class="readonly-item">
+            <div class="mo-readonly-item">
               <label>National ID</label>
-              <div class="readonly-value"><%= valueOrMuted(p.idCard) %></div>
+              <div class="mo-readonly-value"><%= valueOrMuted(p.idCard) %></div>
             </div>
 
-            <div class="readonly-item">
+            <div class="mo-readonly-item">
               <label>CV</label>
-              <div class="readonly-value">
+              <div class="mo-readonly-value">
                 <% if (hasCv) { %>
                   <a href="<%= ctx %>/cv?userId=<%= encodedUserId %>" target="_blank" rel="noopener noreferrer"><%= h(p.cvFileName) %></a>
                 <% } else { %>
@@ -212,9 +151,9 @@
         <div style="display:flex;flex-direction:column;gap:1rem;">
           <h3 class="section-heading">Qualifications &amp; Availability</h3>
 
-          <div class="readonly-item">
+          <div class="mo-readonly-item">
             <label>Education</label>
-            <div class="readonly-value" style="padding:0;">
+            <div class="mo-readonly-value" style="padding:0;">
               <% if (educationList.isEmpty()) { %>
                 <div style="padding:.75rem .875rem;"><span class="muted">Not provided</span></div>
               <% } else { %>
@@ -242,19 +181,19 @@
             </div>
           </div>
 
-          <div class="readonly-item">
+          <div class="mo-readonly-item">
             <label>Courses Completed</label>
-            <div class="readonly-value readonly-value--multiline"><%= htmlBlock(p.courses) %></div>
+            <div class="mo-readonly-value mo-readonly-value--multiline"><%= htmlBlock(p.courses) %></div>
           </div>
 
-          <div class="readonly-item">
+          <div class="mo-readonly-item">
             <label>Availability</label>
-            <div class="readonly-value readonly-value--multiline"><%= htmlBlock(p.freeTime != null && !p.freeTime.trim().isEmpty() ? p.freeTime : p.availability) %></div>
+            <div class="mo-readonly-value mo-readonly-value--multiline"><%= htmlBlock(p.freeTime != null && !p.freeTime.trim().isEmpty() ? p.freeTime : p.availability) %></div>
           </div>
 
-          <div class="readonly-item">
+          <div class="mo-readonly-item">
             <label>Skills</label>
-            <div class="readonly-value readonly-value--multiline"><%= htmlBlock(p.skills) %></div>
+            <div class="mo-readonly-value mo-readonly-value--multiline"><%= htmlBlock(p.skills) %></div>
           </div>
         </div>
       </div>

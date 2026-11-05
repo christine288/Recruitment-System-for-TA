@@ -10,7 +10,15 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 
-/** Minimal HTTPS JSON POST helper (JDK 11 {@link java.net.http.HttpClient}) — no extra libraries. */
+/**
+ * Minimal HTTPS JSON POST helper built on JDK 11 {@link java.net.http.HttpClient}.
+ *
+ * <p>Used by the AI/LM HTTP client for non-streaming and server-sent event (SSE) completions
+ * without third-party HTTP libraries. Each call creates a new {@link HttpClient} instance.
+ *
+ * <p>Not thread-safe across shared mutable state; static methods are safe to invoke concurrently
+ * from multiple threads.
+ */
 public final class HttpJsonClient {
     private static final int MIN_STREAM_REQUEST_TIMEOUT_MS = 180_000;
 
@@ -74,6 +82,20 @@ public final class HttpJsonClient {
         return new String(buf, 0, n, StandardCharsets.UTF_8);
     }
 
+    /**
+     * POSTs JSON to {@code url} and returns the full response body as a UTF-8 string.
+     *
+     * <p>Sets {@code Content-Type: application/json}. On non-2xx responses, throws
+     * {@link IOException} with status and a truncated error body (up to 2,000 characters).
+     *
+     * @param url       target HTTPS endpoint
+     * @param headers   optional extra request headers; null keys or values are skipped
+     * @param body      JSON request body; null is sent as empty string
+     * @param timeoutMs connect and request timeout in milliseconds (minimum 1,000 ms enforced)
+     * @return response body string on success (2xx)
+     * @throws IOException          on I/O failure or non-2xx HTTP status
+     * @throws InterruptedException if the HTTP send is interrupted
+     */
     public static String postJson(String url, Map<String, String> headers, String body, int timeoutMs)
             throws IOException, InterruptedException {
         int t = Math.max(1_000, timeoutMs);

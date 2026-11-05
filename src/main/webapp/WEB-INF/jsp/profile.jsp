@@ -18,7 +18,7 @@
   ApplicantProfile p = (ApplicantProfile) request.getAttribute("profile");
   User u = (User) request.getAttribute("user");
   Boolean editableObj = (Boolean) request.getAttribute("editable");
-  boolean editable = editableObj == null || editableObj;
+  boolean editable = Boolean.TRUE.equals(editableObj);
   if (p == null) p = new ApplicantProfile();
   @SuppressWarnings("unchecked")
   List<EducationEntry> eduList = (List<EducationEntry>) request.getAttribute("educationList");
@@ -124,6 +124,7 @@
             enctype="multipart/form-data"
             novalidate
             data-editable="<%= editable ? "1" : "0" %>">
+        <input type="hidden" name="csrfToken" value="<%= com.bupt.ta.security.CsrfFilter.csrfToken(request) %>" />
 
         <div class="profile-form-grid">
           <div class="profile-panel profile-panel--personal">
@@ -208,7 +209,7 @@
         <div class="profile-subsection">
           <div class="profile-subsection-head">
             <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Curriculum Vitae (CV)
+            Curriculum Vitae (CV) <span style="font-weight:400;color:#94a3b8;">(optional)</span>
           </div>
         <%
           boolean hasCv = p.cvFileName != null && !p.cvFileName.isEmpty();
@@ -261,6 +262,8 @@
               </a>
             </div>
           </div>
+          <% } else { %>
+          <p class="cv-display-label" style="margin:0;color:#64748b;font-size:.9rem;">No CV uploaded.</p>
           <% } %>
           <% if (fieldErrors.get("cv") != null) { %><div class="field-error" style="margin-top:.35rem;"><%= fieldErrors.get("cv") %></div><% } %>
         </div>
@@ -382,6 +385,7 @@
         </div><!-- /profile-form-grid -->
       </form>
       <form id="form-delete-cv" method="post" action="${pageContext.request.contextPath}/profile" class="profile-hidden-form" aria-hidden="true">
+        <input type="hidden" name="csrfToken" value="<%= com.bupt.ta.security.CsrfFilter.csrfToken(request) %>" />
         <input type="hidden" name="action" value="deleteCvOnly" />
       </form>
       <div id="cv-delete-dialog" class="app-dialog-backdrop" role="presentation" aria-hidden="true">

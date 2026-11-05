@@ -3,6 +3,7 @@ package com.bupt.ta.servlet;
 import com.bupt.ta.model.ApplicantProfile;
 import com.bupt.ta.model.Roles;
 import com.bupt.ta.model.User;
+import com.bupt.ta.persistence.ServiceFactory;
 import com.bupt.ta.service.ProfileService;
 
 import javax.servlet.ServletException;
@@ -16,21 +17,44 @@ import java.nio.file.Paths;
 import java.util.regex.Pattern;
 
 /**
- * Serves an applicant's CV: the logged-in TA sees their own file; an MO may pass {@code userId}
- * to view that applicant's stored CV.
+ * Streams an applicant's CV file to the browser.
+ *
+ * <p><b>URL pattern:</b> {@code /cv} (mapped in {@code web.xml})
+ *
+ * <p><b>Role access:</b>
+ * <ul>
+ *   <li>Authenticated TA — downloads own CV (or pending session CV)</li>
+ *   <li>Authenticated MO with {@code userId} parameter — downloads that applicant's CV</li>
+ * </ul>
+ * Unauthenticated callers are redirected to {@code /login}; unauthorized MO access returns 403.
+ *
+ * <p>Only GET is supported. Files are served inline with detected content type.
  */
 public class CvDownloadServlet extends BaseServlet {
     private static final Pattern USER_ID_SAFE = Pattern.compile("^[a-fA-F0-9\\-]{8,64}$");
 
     private ProfileService profiles;
-    private Path dataDir;
+    private Path cvDataDir;
 
+    /**
+     * Initializes {@link ProfileService} from {@code WEB-INF/data}.
+     */
     @Override
     public void init() {
-        dataDir = Paths.get(getServletContext().getRealPath("/WEB-INF/data"));
-        profiles = new ProfileService(dataDir);
+        ServiceFactory f = (ServiceFactory) getServletContext().getAttribute(ServiceFactory.SERVLET_CONTEXT_KEY);
+        profiles = f.getProfileService();
+        cvDataDir = f.getCvDataDir();
     }
 
+    /**
+     * Resolves the target CV (self or MO-specified applicant) and streams the file inline.
+     *
+     * @param req  the incoming request; optional {@code userId} for MO viewing another applicant
+     * @param resp the response; sets content type and Content-Disposition, or forwards to
+     *             cv-error.jsp on failure
+     * @throws ServletException if error JSP forward fails
+     * @throws IOException      if file read or stream write fails
+     */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
@@ -54,6 +78,9 @@ public class CvDownloadServlet extends BaseServlet {
             }
             targetUserId = trimmed;
         } else {
+            if (!ensureTa(req, resp)) {
+                return;
+            }
             targetUserId = u.id;
         }
 
@@ -68,8 +95,8 @@ public class CvDownloadServlet extends BaseServlet {
             if (pend instanceof String) {
                 String ps = ((String) pend).trim();
                 if (!ps.isEmpty()) {
-                    Path pendFile = dataDir.resolve("cv").resolve(u.id).resolve(ps).normalize();
-                    Path cvRootSelf = dataDir.resolve("cv").resolve(u.id).normalize();
+                    Path pendFile = cvDataDir.resolve(u.id).resolve(ps).normalize();
+                    Path cvRootSelf = cvDataDir.resolve(u.id).normalize();
                     if (pendFile.startsWith(cvRootSelf) && Files.isRegularFile(pendFile)) {
                         fileName = ps;
                     }
@@ -82,7 +109,7 @@ public class CvDownloadServlet extends BaseServlet {
             return;
         }
 
-        Path cvRoot = dataDir.resolve("cv").resolve(targetUserId).normalize();
+        Path cvRoot = cvDataDir.resolve(targetUserId).normalize();
         Path file = cvRoot.resolve(fileName).normalize();
         if (!file.startsWith(cvRoot) || !Files.isRegularFile(file)) {
             forwardCvError(req, resp,

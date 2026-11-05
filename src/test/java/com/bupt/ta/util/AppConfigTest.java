@@ -59,4 +59,31 @@ class AppConfigTest {
                 "default-model");
         assertEquals("default-model", v);
     }
+
+    @Test
+    void resolve_blankStringUsesDefault() {
+        Properties file = new Properties();
+        file.setProperty("LM_MODEL", "   ");
+        String v = AppConfig.resolve(
+                "LM_MODEL",
+                new String[]{"LM_MODEL"},
+                file,
+                "LM_MODEL",
+                "fallback");
+        assertEquals("fallback", v);
+    }
+
+    @Test
+    void resolve_firstMatchingSysPropKey() {
+        Properties empty = new Properties();
+        System.setProperty("LM_ALT", "from-alt");
+        String v = AppConfig.resolve(
+                "LM_PROVIDER",
+                new String[]{"LM_ALT", "LM_PROVIDER"},
+                empty,
+                "LM_PROVIDER",
+                "mock");
+        assertEquals("from-alt", v);
+        System.clearProperty("LM_ALT");
+    }
 }

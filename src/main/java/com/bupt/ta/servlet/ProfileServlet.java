@@ -22,10 +22,22 @@ import javax.servlet.http.Part;
 import com.bupt.ta.model.ApplicantProfile;
 import com.bupt.ta.model.EducationEntry;
 import com.bupt.ta.model.User;
+import com.bupt.ta.persistence.ServiceFactory;
 import com.bupt.ta.service.AuthService;
 import com.bupt.ta.service.ProfileService;
 import com.bupt.ta.util.ApplicantFieldValidation;
 
+/**
+ * Manages TA applicant profile viewing, editing, and CV upload.
+ *
+ * <p><b>URL pattern:</b> {@code /profile}
+ *
+ * <p><b>Role access:</b> Authenticated users only (typically {@link com.bupt.ta.model.Roles#TA}).
+ * Unauthenticated callers are redirected to {@code /login}.
+ *
+ * <p>Supports multipart form posts for CV files (PDF, DOC, DOCX). GET shows the profile form;
+ * POST saves profile fields, education entries, and optional CV changes.
+ */
 @WebServlet(urlPatterns = {"/profile"})
 @MultipartConfig(
         fileSizeThreshold = 0,
@@ -38,21 +50,33 @@ public class ProfileServlet extends BaseServlet {
 
     private ProfileService profiles;
     private AuthService auth;
-    private Path dataDir;
+    private Path cvDataDir;
 
+    /**
+     * Initializes profile and auth services from {@code WEB-INF/data}.
+     */
     @Override
     public void init() {
-        dataDir = Paths.get(getServletContext().getRealPath("/WEB-INF/data"));
-        profiles = new ProfileService(dataDir);
-        auth = new AuthService(dataDir);
+        ServiceFactory f = (ServiceFactory) getServletContext().getAttribute(ServiceFactory.SERVLET_CONTEXT_KEY);
+        profiles = f.getProfileService();
+        auth = f.getAuthService();
+        cvDataDir = f.getCvDataDir();
     }
 
+    /**
+     * Loads the current user's profile for display or edit mode.
+     *
+     * @param req  the incoming request; optional {@code edit=1} forces edit mode;
+     *             optional {@code msg} shows an info message
+     * @param resp the response; redirects to {@code /login} when unauthenticated
+     * @throws ServletException if the JSP forward fails
+     * @throws IOException      if profile loading fails
+     */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
         User u = currentUser(req);
-        if (u == null) {
-            resp.sendRedirect(req.getContextPath() + "/login");
+        if (!ensureTa(req, resp)) {
             return;
         }
         Optional<ApplicantProfile> existing = profiles.getByUserId(u.id);
@@ -61,7 +85,9 @@ public class ProfileServlet extends BaseServlet {
         mapLegacyDegreeForForm(p);
         applyPendingCvFromSession(req, u.id, p);
         boolean profileComplete = ProfileService.isApplicantProfileComplete(p);
-        boolean editable = !profileComplete || "1".equals(req.getParameter("edit"));
+        boolean forceEdit = "1".equals(req.getParameter("edit"));
+        boolean editable = !profileComplete || forceEdit;
+        req.setAttribute("profileComplete", profileComplete);
         String msg = req.getParameter("msg");
         req.setAttribute("profile", p);
         req.setAttribute("user", u);
@@ -109,15 +135,24 @@ public class ProfileServlet extends BaseServlet {
         }
     }
 
+    /**
+     * Saves profile changes, handles CV upload/delete, and validates all applicant fields.
+     *
+     * @param req  the incoming request; multipart form with profile fields; optional
+     *             {@code action=deleteCvOnly} removes CV without full save
+     * @param resp the response; redirects to {@code /profile} on success or re-forwards with
+     *             field errors on validation failure
+     * @throws ServletException if the JSP forward fails
+     * @throws IOException      if file or persistence operations fail
+     */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
         req.setCharacterEncoding("UTF-8");
-        User u = currentUser(req);
-        if (u == null) {
-            resp.sendRedirect(req.getContextPath() + "/login");
+        if (!ensureTa(req, resp)) {
             return;
         }
+        User u = currentUser(req);
 
         String action = trim(req.getParameter("action"));
         if ("deleteCvOnly".equals(action)) {
@@ -166,7 +201,7 @@ public class ProfileServlet extends BaseServlet {
         p.availability = existing.map(e -> e.availability).orElse("");
         p.selfIntro = existing.map(e -> e.selfIntro).orElse("");
 
-        Path cvUserDir = dataDir.resolve("cv").resolve(u.id);
+        Path cvUserDir = cvDataDir.resolve(u.id);
         Part cvPart = req.getPart("cv");
         final boolean newCvUpload = cvPart != null && cvPart.getSize() > 0;
         if (!newCvUpload) {
@@ -262,14 +297,15 @@ public class ProfileServlet extends BaseServlet {
             return;
         }
 
-        resp.sendRedirect(req.getContextPath() + "/profile");
+        resp.sendRedirect(req.getContextPath() + "/profile?msg="
+                + urlEncode("Profile saved. You are now in view mode; click Edit to make changes."));
     }
 
     /** Remove CV file(s) from disk and clear {@code cvFileName} without posting the full profile form. */
     private void handleDeleteCvOnly(HttpServletRequest req, HttpServletResponse resp, User u)
             throws IOException {
         String ctx = req.getContextPath();
-        Path cvUserDir = dataDir.resolve("cv").resolve(u.id).normalize();
+        Path cvUserDir = cvDataDir.resolve(u.id).normalize();
         HttpSession session = req.getSession(false);
         String pending = "";
         if (session != null) {
@@ -358,7 +394,7 @@ public class ProfileServlet extends BaseServlet {
         if (pend.isEmpty()) {
             return;
         }
-        Path f = dataDir.resolve("cv").resolve(userId).resolve(pend);
+        Path f = cvDataDir.resolve(userId).resolve(pend);
         try {
             if (Files.isRegularFile(f)) {
                 p.cvFileName = pend;

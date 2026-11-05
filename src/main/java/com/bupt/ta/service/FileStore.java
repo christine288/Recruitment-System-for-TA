@@ -7,22 +7,33 @@ import java.nio.file.Path;
 import java.util.*;
 
 /**
- * Minimal JSON file store — no external libraries.
- * Supports reading/writing a JSON array of flat objects whose fields are all Strings.
- * Format: [{"key":"value",...}, ...]
+ * Minimal JSON file persistence with no external libraries.
+ * <p>
+ * Supports reading and writing a JSON array of flat objects whose field values are strings.
+ * Expected on-disk format: {@code [{"key":"value",...}, ...]}. Missing files are treated as
+ * empty arrays. Also provides static helpers for serialising nested profile payloads and
+ * parsing JSON arrays used elsewhere (e.g. education history in {@link ProfileService}).
  */
 public class FileStore {
     private final Path baseDir;
 
+    /**
+     * Creates a store that resolves file names relative to {@code baseDir}.
+     *
+     * @param baseDir directory containing JSON data files
+     */
     public FileStore(Path baseDir) {
         this.baseDir = baseDir;
     }
 
-    // ------------------------------------------------------------------ read
-
     /**
-     * Reads a JSON array file and returns a list of raw string maps.
-     * Each map represents one JSON object with string values.
+     * Reads a JSON array file and returns a list of string-to-string maps.
+     * <p>
+     * Returns an empty list when the file does not exist, is empty, or contains {@code []}.
+     *
+     * @param fileName file name relative to {@link #baseDir}
+     * @return parsed rows; never {@code null}
+     * @throws IOException if the file exists but cannot be read
      */
     public List<Map<String, String>> readMaps(String fileName) throws IOException {
         Path p = baseDir.resolve(fileName);
@@ -32,10 +43,14 @@ public class FileStore {
         return parseJsonArray(json);
     }
 
-    // ----------------------------------------------------------------- write
-
     /**
-     * Writes a list of string maps as a JSON array to the given file.
+     * Writes a list of string maps as a formatted JSON array to the given file.
+     * <p>
+     * Parent directories are created if missing. Existing file content is replaced.
+     *
+     * @param fileName file name relative to {@link #baseDir}
+     * @param items    rows to serialise; {@code null} entries are not expected
+     * @throws IOException if directories cannot be created or the file cannot be written
      */
     public void writeMaps(String fileName, List<Map<String, String>> items) throws IOException {
         Path p = baseDir.resolve(fileName);
@@ -46,14 +61,17 @@ public class FileStore {
         }
     }
 
-    // ------------------------------------------------------- JSON serialiser
-
     private static String toJsonArray(List<Map<String, String>> items) {
         return toJsonArrayOfObjects(items);
     }
 
     /**
-     * Serialises a JSON array of objects with string values (used for nested profile payloads).
+     * Serialises a JSON array of objects with string values.
+     * <p>
+     * Used for nested profile payloads such as education history embedded in profile fields.
+     *
+     * @param items list of flat string maps, one per JSON object
+     * @return JSON array text with optional newlines between elements
      */
     public static String toJsonArrayOfObjects(List<Map<String, String>> items) {
         StringBuilder sb = new StringBuilder();
@@ -90,29 +108,29 @@ public class FileStore {
                 .replace("\t", "\\t");
     }
 
-    // ------------------------------------------------------- JSON parser
-
     /**
-     * Minimal hand-rolled parser for a JSON array of flat string-valued objects.
-     * Handles escaped characters inside string values.
+     * Parses a JSON array of flat string-valued objects.
+     * <p>
+     * Hand-rolled parser that handles escaped characters inside string values. Non-string
+     * scalar values are read as bare tokens; {@code null} literals become Java {@code null}.
+     *
+     * @param json JSON text beginning with {@code [}
+     * @return list of object maps in array order; never {@code null}
      */
     static List<Map<String, String>> parseJsonArray(String json) {
         List<Map<String, String>> result = new ArrayList<>();
         int i = 0;
         int len = json.length();
-        // skip leading '['
         while (i < len && json.charAt(i) != '[') i++;
-        i++; // consume '['
+        i++;
 
         while (i < len) {
-            // skip whitespace
             while (i < len && Character.isWhitespace(json.charAt(i))) i++;
             if (i >= len) break;
             char c = json.charAt(i);
             if (c == ']') break;
             if (c == '{') {
-                // parse object
-                int[] pos = {i + 1}; // pos[0] is current index inside object
+                int[] pos = {i + 1};
                 Map<String, String> obj = new LinkedHashMap<>();
                 while (pos[0] < len) {
                     skipWs(json, pos);
@@ -126,7 +144,7 @@ public class FileStore {
                         String value = readValue(json, pos);
                         obj.put(key, value);
                     } else {
-                        pos[0]++; // unexpected char, skip
+                        pos[0]++;
                     }
                 }
                 result.add(obj);
@@ -145,7 +163,7 @@ public class FileStore {
     }
 
     private static String readString(String s, int[] pos) {
-        pos[0]++; // consume opening quote
+        pos[0]++;
         StringBuilder sb = new StringBuilder();
         while (pos[0] < s.length()) {
             char c = s.charAt(pos[0]);
@@ -164,7 +182,7 @@ public class FileStore {
                     pos[0]++;
                 }
             } else if (c == '\"') {
-                pos[0]++; // consume closing quote
+                pos[0]++;
                 break;
             } else {
                 sb.append(c);
@@ -178,7 +196,6 @@ public class FileStore {
         if (pos[0] < s.length() && s.charAt(pos[0]) == '\"') {
             return readString(s, pos);
         }
-        // bare value (null, number, boolean) — read until delimiter
         StringBuilder sb = new StringBuilder();
         while (pos[0] < s.length()) {
             char c = s.charAt(pos[0]);

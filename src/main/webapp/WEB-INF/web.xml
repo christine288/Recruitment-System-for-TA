@@ -9,6 +9,19 @@
     <welcome-file>login</welcome-file>
   </welcome-file-list>
 
+  <listener>
+    <listener-class>com.bupt.ta.persistence.AppInitListener</listener-class>
+  </listener>
+
+  <filter>
+    <filter-name>CsrfFilter</filter-name>
+    <filter-class>com.bupt.ta.security.CsrfFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>CsrfFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
   <!-- Explicit mapping so /mo works even if annotation scanning misses @WebServlet -->
   <servlet>
     <servlet-name>MoServlet</servlet-name>
@@ -45,4 +58,13 @@
     <servlet-name>AiStreamServlet</servlet-name>
     <url-pattern>/api/ai/stream</url-pattern>
   </servlet-mapping>
+    <!-- Custom error pages -->
+    <error-page>
+        <error-code>403</error-code>
+        <location>/WEB-INF/jsp/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>404</error-code>
+        <location>/WEB-INF/jsp/error.jsp</location>
+    </error-page>
 </web-app>

@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"com.bupt.ta.ai"},{"l":"com.bupt.ta.model"},{"l":"com.bupt.ta.persistence"},{"l":"com.bupt.ta.security"},{"l":"com.bupt.ta.service"},{"l":"com.bupt.ta.service.admin"},{"l":"com.bupt.ta.service.ai"},{"l":"com.bupt.ta.servlet"},{"l":"com.bupt.ta.util"}];updateSearchResults();

@@ -2,6 +2,7 @@
 <%@ page import="com.bupt.ta.service.ai.AiFeatureOutput" %>
 <%
   String ctx = request.getContextPath();
+  String csrfToken = com.bupt.ta.security.CsrfFilter.csrfToken(request);
   Boolean lmEnabled = (Boolean) request.getAttribute("lmEnabled");
   String lmProvider = (String) request.getAttribute("lmProvider");
   AiFeatureOutput result = (AiFeatureOutput) request.getAttribute("result");
@@ -115,6 +116,7 @@
         <div class="card-header"><h2 class="card-title">Skill match</h2></div>
         <div class="card-content">
           <form method="post" action="<%= ctx %>/admin/ai-demo">
+            <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
             <input type="hidden" name="action" value="match" />
             <p class="tooltip-small">Applicant skills (comma-separated)</p>
             <textarea class="ai-input" name="applicantSkills" placeholder="Java, SQL, communication">Java, Python, SQL</textarea>
@@ -129,6 +131,7 @@
         <div class="card-header"><h2 class="card-title">Missing skills</h2></div>
         <div class="card-content">
           <form method="post" action="<%= ctx %>/admin/ai-demo">
+            <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
             <input type="hidden" name="action" value="missing" />
             <p class="tooltip-small">Candidate skills</p>
             <textarea class="ai-input" name="candidateSkills">Java, office hours</textarea>
@@ -143,6 +146,7 @@
         <div class="card-header"><h2 class="card-title">Job recommendation</h2></div>
         <div class="card-content">
           <form method="post" action="<%= ctx %>/admin/ai-demo">
+            <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
             <input type="hidden" name="action" value="recommend" />
             <p class="tooltip-small">Candidate profile (short)</p>
             <textarea class="ai-input" name="candidateProfile">Final-year BSc; strong Java; prefers lab sessions.</textarea>

@@ -7,8 +7,13 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Shared validation for applicant identity fields (profile and registration).
- * Degree level is stored in English; only graduate applicants (Master / Doctoral) are allowed.
+ * Shared validation for applicant identity fields on profile and registration forms.
+ *
+ * <p>Degree level is stored in English; only graduate applicants ({@code Master} / {@code Doctoral})
+ * are allowed. Phone numbers are normalized to mainland China {@code +86} format. Student IDs
+ * follow BUPT 10-digit rules; ID cards use 18-digit PRC resident ID checksum validation.
+ *
+ * <p>Thread-safe: all public methods are stateless and use immutable patterns and whitelists.
  */
 public final class ApplicantFieldValidation {
     private ApplicantFieldValidation() {}
@@ -27,21 +32,44 @@ public final class ApplicantFieldValidation {
         APPLICANT_DEGREE_LEVEL_WHITELIST = Collections.unmodifiableSet(d);
     }
 
-    /** Values allowed for {@link com.bupt.ta.model.ApplicantProfile#degree} (current study level). */
+    /**
+     * Returns the immutable set of values allowed for
+     * {@link com.bupt.ta.model.ApplicantProfile#degree} (current study level).
+     *
+     * @return unmodifiable set containing {@code Master} and {@code Doctoral}
+     */
     public static Set<String> applicantDegreeLevelWhitelist() {
         return APPLICANT_DEGREE_LEVEL_WHITELIST;
     }
 
+    /**
+     * Checks whether the degree is an allowed applicant study level.
+     *
+     * @param degree degree string to validate; null is rejected
+     * @return {@code true} if {@code degree} is a whitelisted study level after trimming
+     */
     public static boolean isAllowedApplicantDegreeLevel(String degree) {
         return degree != null && APPLICANT_DEGREE_LEVEL_WHITELIST.contains(degree.trim());
     }
 
+    /**
+     * Validates a full name: 2–60 Unicode letters, spaces, dots, apostrophes, or hyphens.
+     *
+     * @param name candidate name; null is rejected
+     * @return {@code true} if the trimmed name matches the allowed pattern
+     */
     public static boolean isValidFullName(String name) {
         return name != null && NAME_PATTERN.matcher(name.trim()).matches();
     }
 
     /**
-     * Domain must look like a real host (e.g. bupt.edu.cn): dot in domain, ASCII TLD 2+ letters.
+     * Validates an email address with a plausible domain (e.g. {@code bupt.edu.cn}).
+     *
+     * <p>Requires a dot in the domain and an ASCII TLD of at least two letters. Local part
+     * must match {@code [a-zA-Z0-9._%+-]+}.
+     *
+     * @param email candidate email; null is rejected
+     * @return {@code true} if format and domain rules pass
      */
     public static boolean isValidEmailWithRealDomain(String email) {
         if (email == null) {
@@ -72,7 +100,13 @@ public final class ApplicantFieldValidation {
     }
 
     /**
-     * Normalize mainland mobile to {@code +86} plus 11 digits. Accepts 11-digit local form or 13-digit starting with 86.
+     * Normalizes a mainland China mobile number to {@code +86} plus 11 digits.
+     *
+     * <p>Accepts 11-digit local form (starting with {@code 1}) or 13-digit form starting with
+     * {@code 86}. Non-digit characters in input are stripped before parsing.
+     *
+     * @param raw raw phone input; null yields {@code null}
+     * @return normalized {@code +861XXXXXXXXXX}, or {@code null} if input cannot be normalized
      */
     public static String normalizeChinaPhone(String raw) {
         if (raw == null) {
@@ -88,11 +122,25 @@ public final class ApplicantFieldValidation {
         return null;
     }
 
+    /**
+     * Validates a phone already normalized by {@link #normalizeChinaPhone(String)}.
+     *
+     * @param phone normalized phone string; null is rejected
+     * @return {@code true} if the value matches {@code +861[3-9]XXXXXXXXX}
+     */
     public static boolean isValidChinaMobileNormalized(String phone) {
         return phone != null && PHONE_CN_PATTERN.matcher(phone).matches();
     }
 
-    /** BUPT-style 10-digit student number; first 4 digits = admission year (2000 … current year + 1). */
+    /**
+     * Validates a BUPT-style 10-digit student number.
+     *
+     * <p>The first four digits must be an admission year between 2000 and the current calendar
+     * year plus one.
+     *
+     * @param raw candidate student id; null is rejected
+     * @return {@code true} if exactly 10 digits with a plausible cohort year
+     */
     public static boolean isValidBuptTenDigitStudentId(String raw) {
         if (raw == null) {
             return false;
@@ -111,7 +159,14 @@ public final class ApplicantFieldValidation {
         return cohort >= 2000 && cohort <= y + 1;
     }
 
-    /** 18-digit PRC resident ID: shape + ISO 7064:2003 MOD 11-2 check character. */
+    /**
+     * Validates an 18-digit PRC resident ID card number.
+     *
+     * <p>Checks structural regex and ISO 7064:2003 MOD 11-2 check character on the last digit.
+     *
+     * @param raw candidate ID number; null is rejected
+     * @return {@code true} if shape and checksum are valid (case-insensitive on trailing X)
+     */
     public static boolean isValidChineseResidentId18(String raw) {
         if (raw == null) {
             return false;

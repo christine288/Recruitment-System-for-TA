@@ -152,18 +152,39 @@ public final class LmConfig {
         }
     }
 
+    /**
+     * Returns whether AI / LM features are enabled at the configuration level.
+     *
+     * @return {@code true} when {@code LM_ENABLED} resolves to an affirmative value;
+     *         {@code false} when explicitly disabled (mock client will report AI as off)
+     */
     public boolean isEnabled() {
         return enabled;
     }
 
+    /**
+     * Returns the configured backend provider type.
+     *
+     * @return {@link LmProviderType} from {@code LM_PROVIDER}; never {@code null}
+     */
     public LmProviderType getProviderType() {
         return providerType;
     }
 
+    /**
+     * Returns the API key for HTTP providers ({@code LM_API_KEY}).
+     *
+     * @return API key string, or empty string when not configured
+     */
     public String getApiKey() {
         return apiKey;
     }
 
+    /**
+     * Returns the provider API base URL ({@code LM_BASE_URL}), without the chat path.
+     *
+     * @return trimmed base URL, or empty string when not configured
+     */
     public String getBaseUrl() {
         return baseUrl;
     }
@@ -189,6 +210,14 @@ public final class LmConfig {
         return timeoutMs;
     }
 
+    /**
+     * Returns the relative chat completions path ({@code LM_HTTP_CHAT_PATH}).
+     *
+     * <p>Appended to {@link #getBaseUrl()} by {@link HttpLmClient}. Defaults to
+     * {@code /chat/completions} when unset or empty.
+     *
+     * @return path beginning with {@code /}, suitable for OpenAI-compatible APIs
+     */
     public String getHttpChatPath() {
         return httpChatPath;
     }

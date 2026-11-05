@@ -25,10 +25,20 @@
     <!-- Card -->
     <div class="card">
       <% String error = (String) request.getAttribute("error"); if (error != null) { %>
-        <div class="alert alert-error"><%= error %></div>
+        <div class="alert alert-error" role="alert"><%= error %></div>
       <% } %>
 
+      <details class="demo-accounts" style="margin-bottom:1rem;padding:.75rem 1rem;background:#f1f5f9;border-radius:8px;font-size:.875rem;">
+        <summary style="cursor:pointer;font-weight:600;color:#334155;">Demo accounts (coursework)</summary>
+        <table style="width:100%;margin-top:.5rem;border-collapse:collapse;">
+          <tr><td style="padding:.25rem 0;">Admin</td><td><code>admin@bupt.local</code></td><td><code>admin123</code></td></tr>
+          <tr><td style="padding:.25rem 0;">MO</td><td><code>mo@bupt.local</code></td><td><code>mo123</code></td></tr>
+          <tr><td style="padding:.25rem 0;">TA</td><td><code>alice.chen@bupt.local</code></td><td><code>ta123</code></td></tr>
+        </table>
+      </details>
+
       <form class="form" method="post" action="${pageContext.request.contextPath}/login">
+        <input type="hidden" name="csrfToken" value="<%= com.bupt.ta.security.CsrfFilter.csrfToken(request) %>" />
         <div class="field">
           <label for="email">Email</label>
           <input id="email" name="email" type="email" placeholder="student@university.edu" required />

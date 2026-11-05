@@ -24,6 +24,7 @@ import java.util.logging.Logger;
 public final class LmClientFactory {
     private static final Logger LOG = Logger.getLogger(LmClientFactory.class.getName());
 
+    /** Prevents instantiation of this factory utility class. */
     private LmClientFactory() {}
 
     /**

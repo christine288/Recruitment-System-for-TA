@@ -61,5 +61,14 @@
     "passwordHash": "1234",
     "role": "TA",
     "active": "true"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000106",
+    "name": "Sun Ruiyang",
+    "studentId": "2023213488",
+    "email": "markrivera683@bupt.edu.cn",
+    "passwordHash": "ta123",
+    "role": "TA",
+    "active": "true"
   }
 ]

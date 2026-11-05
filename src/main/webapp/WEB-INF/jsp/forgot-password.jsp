@@ -46,10 +46,14 @@
         <div class="icon-circle icon-circle--blue">
           <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
         </div>
+        <p style="text-align:center;margin-bottom:1rem;line-height:1.625;font-size:.875rem;color:#64748b;background:#fef3c7;padding:.75rem;border-radius:8px;">
+          Password reset sends an email when SMTP is configured (see Docker MailHog in deployment docs). Without SMTP, check server logs for the reset link token.
+        </p>
         <p style="text-align:center;margin-bottom:1.5rem;line-height:1.625;font-size:.9375rem;color:#475569;">
           We'll send a password reset link to your registered university email address.
         </p>
         <form class="form" method="post" action="${pageContext.request.contextPath}/forgot-password">
+          <input type="hidden" name="csrfToken" value="<%= com.bupt.ta.security.CsrfFilter.csrfToken(request) %>" />
           <div class="field">
             <label for="email">Email Address</label>
             <input id="email" name="email" type="email" placeholder="student@university.edu" required />

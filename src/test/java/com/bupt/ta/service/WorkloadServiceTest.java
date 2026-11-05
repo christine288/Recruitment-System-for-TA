@@ -106,6 +106,47 @@ class WorkloadServiceTest {
         assertTrue(snap.potentialLoadIfApprove >= TaWorkloadStats.ASSIGNED_JOBS_WARNING_THRESHOLD + 1);
     }
 
+    @Test
+    void buildTaWorkloadStats_ignoresNonTaUsers() {
+        User mo = user("mo1", Roles.MO);
+        Application app = app("a1", "mo1", "Accepted");
+        Map<String, TaWorkloadStats> stats = service.buildTaWorkloadStats(
+                Collections.singletonList(mo), Collections.singletonList(app));
+        assertTrue(stats.isEmpty());
+    }
+
+    @Test
+    void buildTaWorkloadStats_emptyUsers() {
+        Application app = app("a1", "u1", "Pending");
+        assertTrue(service.buildTaWorkloadStats(Collections.emptyList(),
+                Collections.singletonList(app)).isEmpty());
+    }
+
+    @Test
+    void buildSnapshot_resolvesHoursFromJob() {
+        Application pending = app("p1", "u1", "Pending");
+        pending.moduleCode = "CS50";
+        Job job = job("CS50", "6h/week");
+        MoWorkloadSnapshot snap = service.buildSnapshotForApplication(
+                "p1", Collections.singletonList(pending), Collections.singletonList(job), "Eve");
+        assertEquals("6h/week", snap.targetWorkloadHours);
+    }
+
+    @Test
+    void buildSnapshot_unknownHours_returnsUnknown() {
+        Application pending = app("p1", "u1", "Pending");
+        pending.moduleCode = "UNKNOWN";
+        MoWorkloadSnapshot snap = service.buildSnapshotForApplication(
+                "p1", Collections.singletonList(pending), Collections.emptyList(), "Eve");
+        assertEquals("unknown", snap.targetWorkloadHours);
+    }
+
+    @Test
+    void buildSnapshotForApplication_missingId_returnsNull() {
+        assertNull(service.buildSnapshotForApplication("missing",
+                Collections.emptyList(), Collections.emptyList(), "X"));
+    }
+
     private static User user(String id, String role) {
         User u = new User();
         u.id = id;

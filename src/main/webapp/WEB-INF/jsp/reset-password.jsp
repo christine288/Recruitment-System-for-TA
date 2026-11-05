@@ -44,6 +44,11 @@
           <div class="alert alert-error"><%= error %></div>
         <% } %>
         <form class="form" method="post" action="${pageContext.request.contextPath}/reset-password">
+          <input type="hidden" name="csrfToken" value="<%= com.bupt.ta.security.CsrfFilter.csrfToken(request) %>" />
+          <% String tokenVal = (String) request.getAttribute("token");
+             if (tokenVal != null && !tokenVal.trim().isEmpty()) { %>
+          <input type="hidden" name="token" value="<%= tokenVal.replace("&","&amp;").replace("\"","&quot;") %>" />
+          <% } %>
           <div class="field">
             <label for="password">New Password</label>
             <input id="password" name="password" type="password" placeholder="Enter new password" required />

@@ -7,7 +7,15 @@
     "requiredSkills": ["Python", "C Programming", "Problem Solving", "Communication"],
     "description": "Assist students during lab sessions with programming assignments, debugging, and understanding core computer science concepts. Help facilitate hands-on learning and provide technical support.",
     "postDate": "2026-03-15",
-    "numberOfTAs": "2"
+    "applicationDeadline": "",
+    "duration": "One semester",
+    "numberOfTAs": "2",
+    "schedule": ["Monday 14:00 - 16:00", "Wednesday 14:00 - 16:00"],
+    "status": "Published",
+    "createdByMoId": "00000000-0000-0000-0000-000000000002",
+    "createdAt": "2026-03-15",
+    "publishedAt": "2026-03-15",
+    "workloadHours": ""
   },
   {
     "id": "2",
@@ -17,7 +25,15 @@
     "requiredSkills": ["Linear Algebra", "Mathematical Reasoning", "Teaching Experience"],
     "description": "Lead tutorial sessions to reinforce lecture content, work through problem sets with students, and provide additional explanations of complex mathematical concepts.",
     "postDate": "2026-03-20",
-    "numberOfTAs": "2"
+    "applicationDeadline": "",
+    "duration": "One semester",
+    "numberOfTAs": "2",
+    "schedule": ["Tuesday 10:00 - 11:30", "Thursday 10:00 - 11:30"],
+    "status": "Published",
+    "createdByMoId": "00000000-0000-0000-0000-000000000002",
+    "createdAt": "2026-03-20",
+    "publishedAt": "2026-03-20",
+    "workloadHours": ""
   },
   {
     "id": "3",
@@ -27,7 +43,15 @@
     "requiredSkills": ["Attention to Detail", "Time Management", "Responsibility"],
     "description": "Supervise students during mid-term and final examinations, ensure academic integrity, distribute and collect exam papers, and manage exam room logistics.",
     "postDate": "2026-03-10",
-    "numberOfTAs": "2"
+    "applicationDeadline": "",
+    "duration": "One semester",
+    "numberOfTAs": "2",
+    "schedule": ["Exam period (dates announced by module leader)"],
+    "status": "Published",
+    "createdByMoId": "00000000-0000-0000-0000-000000000002",
+    "createdAt": "2026-03-10",
+    "publishedAt": "2026-03-10",
+    "workloadHours": ""
   },
   {
     "id": "4",
@@ -37,7 +61,15 @@
     "requiredSkills": ["Physics", "Laboratory Safety", "Data Analysis", "Equipment Handling"],
     "description": "Assist with physics laboratory experiments, demonstrate proper use of equipment, help students collect and analyze experimental data, and ensure lab safety protocols are followed.",
     "postDate": "2026-03-25",
-    "numberOfTAs": "2"
+    "applicationDeadline": "",
+    "duration": "One semester",
+    "numberOfTAs": "2",
+    "schedule": ["Monday 14:00 - 16:00", "Wednesday 14:00 - 16:00"],
+    "status": "Published",
+    "createdByMoId": "00000000-0000-0000-0000-000000000002",
+    "createdAt": "2026-03-25",
+    "publishedAt": "2026-03-25",
+    "workloadHours": ""
   },
   {
     "id": "5",
@@ -47,6 +79,14 @@
     "requiredSkills": ["Python", "Machine Learning", "Statistics", "Jupyter Notebooks"],
     "description": "Support students in understanding machine learning algorithms, assist with coding assignments, explain statistical concepts, and help troubleshoot implementation issues.",
     "postDate": "2026-03-18",
-    "numberOfTAs": "2"
+    "applicationDeadline": "",
+    "duration": "One semester",
+    "numberOfTAs": "2",
+    "schedule": ["Tuesday 10:00 - 11:30", "Thursday 10:00 - 11:30"],
+    "status": "Published",
+    "createdByMoId": "00000000-0000-0000-0000-000000000002",
+    "createdAt": "2026-03-18",
+    "publishedAt": "2026-03-18",
+    "workloadHours": ""
   }
 ]

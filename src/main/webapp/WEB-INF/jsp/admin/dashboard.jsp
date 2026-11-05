@@ -7,8 +7,6 @@
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
 <%@ page import="java.util.LinkedHashMap" %>
-<%@ page import="java.util.ArrayList" %>
-<%@ page import="java.util.Collections" %>
 <%
   @SuppressWarnings("unchecked")
   List<User> users = (List<User>) request.getAttribute("users");
@@ -47,8 +45,6 @@
   statusMap.put("Pending", 0);
   statusMap.put("Accepted", 0);
   statusMap.put("Rejected", 0);
-  Map<String, Integer> moduleMap = new LinkedHashMap<String, Integer>();
-  Map<String, Integer> monthMap = new LinkedHashMap<String, Integer>();
   for (Application a : applications) {
     String rawSt = a.status == null ? "" : a.status.trim();
     String bucket;
@@ -56,32 +52,16 @@
     else if ("Rejected".equalsIgnoreCase(rawSt)) bucket = "Rejected";
     else bucket = "Pending";
     statusMap.put(bucket, statusMap.getOrDefault(bucket, 0) + 1);
-    String moduleName = a.moduleName == null || a.moduleName.trim().isEmpty() ? "Unknown Module" : a.moduleName.trim();
-    moduleMap.put(moduleName, moduleMap.getOrDefault(moduleName, 0) + 1);
-    String month = "Unknown";
-    if (a.applicationDate != null && a.applicationDate.length() >= 7) {
-      month = a.applicationDate.substring(0, 7);
-    }
-    monthMap.put(month, monthMap.getOrDefault(month, 0) + 1);
   }
-  List<Map.Entry<String, Integer>> topModules = new ArrayList<Map.Entry<String, Integer>>(moduleMap.entrySet());
-  Collections.sort(topModules, new java.util.Comparator<Map.Entry<String, Integer>>() {
-    public int compare(Map.Entry<String, Integer> a, Map.Entry<String, Integer> b) {
-      return Integer.compare(b.getValue(), a.getValue());
-    }
-  });
-  if (topModules.size() > 5) topModules = topModules.subList(0, 5);
-  List<Map.Entry<String, Integer>> monthTrend = new ArrayList<Map.Entry<String, Integer>>(monthMap.entrySet());
-  Collections.sort(monthTrend, new java.util.Comparator<Map.Entry<String, Integer>>() {
-    public int compare(Map.Entry<String, Integer> a, Map.Entry<String, Integer> b) {
-      return a.getKey().compareTo(b.getKey());
-    }
-  });
-  int maxMonthCount = 1;
-  for (Map.Entry<String, Integer> e : monthTrend) {
-    if (e.getValue() > maxMonthCount) maxMonthCount = e.getValue();
-  }
+  String chartDataJson = (String) request.getAttribute("chartDataJson");
+  if (chartDataJson == null) chartDataJson = "{}";
+  Boolean aiEnabledObj = (Boolean) request.getAttribute("aiEnabled");
+  boolean aiEnabled = aiEnabledObj != null && aiEnabledObj.booleanValue();
+  Integer highWorkloadObj = (Integer) request.getAttribute("highWorkloadTaCount");
+  int highWorkloadTaCount = highWorkloadObj != null ? highWorkloadObj.intValue() : 0;
+
   String ctx = request.getContextPath();
+  String csrfToken = com.bupt.ta.security.CsrfFilter.csrfToken(request);
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -124,104 +104,176 @@
   </div>
   <% } %>
 
-  <main class="container">
-    <section class="grid-3">
-      <article class="card">
+  <main class="container container--wide">
+    <section class="grid-3 stat-row">
+      <article class="card stat-card">
         <div class="card-header">
-          <h2 class="card-title">Total TAs</h2>
-          <div class="icon-wrap bg-blue" aria-hidden="true">&#128101;</div>
+          <div>
+            <h2 class="card-title">Total TAs</h2>
+            <p class="stat-hint">Registered applicant accounts</p>
+          </div>
+          <div class="icon-wrap bg-blue" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
         </div>
         <div class="card-content"><div class="stat-value"><%= totalTa %></div></div>
       </article>
-      <article class="card">
+      <article class="card stat-card">
         <div class="card-header">
-          <h2 class="card-title">Total Jobs</h2>
-          <div class="icon-wrap bg-green" aria-hidden="true">&#128188;</div>
+          <div>
+            <h2 class="card-title">Open Jobs</h2>
+            <p class="stat-hint">Published vacancies in system</p>
+          </div>
+          <div class="icon-wrap bg-green" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          </div>
         </div>
         <div class="card-content"><div class="stat-value"><%= jobList.size() %></div></div>
       </article>
-      <article class="card">
+      <article class="card stat-card">
         <div class="card-header">
-          <h2 class="card-title">Total Applications</h2>
-          <div class="icon-wrap bg-purple" aria-hidden="true">&#128221;</div>
+          <div>
+            <h2 class="card-title">Applications</h2>
+            <p class="stat-hint">All submission records</p>
+          </div>
+          <div class="icon-wrap bg-purple" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
         </div>
         <div class="card-content"><div class="stat-value"><%= totalApplications %></div></div>
       </article>
     </section>
 
-    <section class="card">
-      <div class="card-header"><h2 class="card-title">Application Status Analysis</h2></div>
-      <div class="card-content card-content--status-analysis">
-        <div class="status-grid status-grid--app-buttons" role="group" aria-label="Application counts by status">
-          <a class="button status-app-btn" href="<%= ctx %>/admin/applications/by-status?status=pending">
-            <span class="status-app-btn__label">Pending</span>
-            <span class="status-app-btn__count"><%= statusMap.getOrDefault("Pending", 0) %></span>
-          </a>
-          <a class="button button-success status-app-btn" href="<%= ctx %>/admin/applications/by-status?status=accepted">
-            <span class="status-app-btn__label">Accepted</span>
-            <span class="status-app-btn__count"><%= statusMap.getOrDefault("Accepted", 0) %></span>
-          </a>
-          <a class="button button-danger status-app-btn" href="<%= ctx %>/admin/applications/by-status?status=rejected">
-            <span class="status-app-btn__label">Rejected</span>
-            <span class="status-app-btn__count"><%= statusMap.getOrDefault("Rejected", 0) %></span>
-          </a>
+    <!-- AI Insights & Charts -->
+    <section class="analytics-section" aria-labelledby="analytics-heading">
+      <div class="section-head">
+        <div>
+          <h2 id="analytics-heading" class="section-head__title">AI Insights &amp; Analytics</h2>
+          <p class="section-head__subtitle">Platform trends with AI-generated executive summary</p>
         </div>
+        <span class="ai-chip">AI-powered</span>
+      </div>
+
+      <div class="analytics-kpi-row">
+        <article class="card analytics-kpi-card">
+          <p class="analytics-kpi-card__label">Total users</p>
+          <p class="analytics-kpi-card__value"><%= users.size() %></p>
+        </article>
+        <article class="card analytics-kpi-card analytics-kpi-card--pending">
+          <p class="analytics-kpi-card__label">Pending reviews</p>
+          <p class="analytics-kpi-card__value"><%= statusMap.get("Pending") %></p>
+        </article>
+        <article class="card analytics-kpi-card analytics-kpi-card--accepted">
+          <p class="analytics-kpi-card__label">Accepted</p>
+          <p class="analytics-kpi-card__value"><%= statusMap.get("Accepted") %></p>
+        </article>
+        <article class="card analytics-kpi-card<%= highWorkloadTaCount > 0 ? " analytics-kpi-card--alert" : "" %>">
+          <p class="analytics-kpi-card__label">Workload alerts</p>
+          <p class="analytics-kpi-card__value"><%= highWorkloadTaCount %></p>
+        </article>
+      </div>
+
+      <div class="analytics-layout">
+        <div class="analytics-main">
+          <div class="grid-2 chart-row">
+            <article class="card chart-card">
+              <div class="card-header chart-card__header">
+                <div>
+                  <h3 class="card-title">Applicant pool growth</h3>
+                  <p class="chart-card__desc">Cumulative unique applicants by first application month</p>
+                </div>
+              </div>
+              <div class="card-content chart-card__body">
+                <div class="chart-canvas-wrap"><canvas id="chartApplicantPool" aria-label="Applicant pool growth chart"></canvas></div>
+              </div>
+            </article>
+            <article class="card chart-card">
+              <div class="card-header chart-card__header">
+                <div>
+                  <h3 class="card-title">Monthly applications</h3>
+                  <p class="chart-card__desc">Submission volume over time</p>
+                </div>
+              </div>
+              <div class="card-content chart-card__body">
+                <div class="chart-canvas-wrap"><canvas id="chartApplications" aria-label="Monthly applications chart"></canvas></div>
+              </div>
+            </article>
+          </div>
+
+          <div class="grid-2 chart-row">
+            <article class="card chart-card">
+              <div class="card-header chart-card__header">
+                <h3 class="card-title">Pipeline status</h3>
+              </div>
+              <div class="card-content chart-card__body">
+                <div class="chart-canvas-wrap chart-canvas-wrap--donut"><canvas id="chartStatus"></canvas></div>
+                <div class="status-quick-links">
+                  <a class="status-link status-link--pending" href="<%= ctx %>/admin/applications/by-status?status=pending">Pending <%= statusMap.get("Pending") %></a>
+                  <a class="status-link status-link--accepted" href="<%= ctx %>/admin/applications/by-status?status=accepted">Accepted <%= statusMap.get("Accepted") %></a>
+                  <a class="status-link status-link--rejected" href="<%= ctx %>/admin/applications/by-status?status=rejected">Rejected <%= statusMap.get("Rejected") %></a>
+                </div>
+              </div>
+            </article>
+            <article class="card chart-card">
+              <div class="card-header chart-card__header">
+                <h3 class="card-title">Users by role</h3>
+              </div>
+              <div class="card-content chart-card__body">
+                <div class="chart-canvas-wrap chart-canvas-wrap--donut"><canvas id="chartRoles"></canvas></div>
+              </div>
+            </article>
+          </div>
+
+          <article class="card chart-card">
+            <div class="card-header chart-card__header">
+              <div>
+                <h3 class="card-title">Top modules by applications</h3>
+                <p class="chart-card__desc">Most popular teaching modules in the pipeline</p>
+              </div>
+            </div>
+            <div class="card-content chart-card__body">
+              <div class="chart-canvas-wrap chart-canvas-wrap--bar"><canvas id="chartModules"></canvas></div>
+            </div>
+          </article>
+        </div>
+
+        <aside class="analytics-sidebar">
+          <article class="card analytics-ai-card">
+            <div class="card-header analytics-ai-card__header">
+              <div>
+                <h3 class="card-title">AI platform briefing</h3>
+                <p class="chart-card__desc">Executive summary &amp; recommended actions</p>
+              </div>
+              <% if (highWorkloadTaCount > 0) { %>
+              <span class="alert-chip"><%= highWorkloadTaCount %> alert<%= highWorkloadTaCount == 1 ? "" : "s" %></span>
+              <% } %>
+            </div>
+            <div class="card-content analytics-ai-card__body">
+              <% if (aiEnabled) { %>
+              <div class="analytics-ai__panel" id="admin-ai-panel">
+                <div class="analytics-ai__loading">Analyzing platform metrics…</div>
+                <div class="analytics-ai__md" style="display:none;"></div>
+              </div>
+              <% } else { %>
+              <div class="analytics-ai__disabled">AI analytics disabled (LM_ENABLED=false).</div>
+              <% } %>
+            </div>
+          </article>
+        </aside>
       </div>
     </section>
 
-    <section class="grid-2">
-      <section class="card">
-        <div class="card-header"><h2 class="card-title">Top Modules by Applications</h2></div>
-        <div class="card-content">
-          <% if (topModules.isEmpty()) { %>
-            <p class="tooltip-small">No application data available.</p>
-          <% } else { %>
-          <table class="table">
-            <thead>
-              <tr><th>Module</th><th>Applications</th></tr>
-            </thead>
-            <tbody>
-              <% for (Map.Entry<String, Integer> item : topModules) { %>
-              <tr>
-                <td><%= item.getKey() %></td>
-                <td><span class="badge badge-open"><%= item.getValue() %></span></td>
-              </tr>
-              <% } %>
-            </tbody>
-          </table>
-          <% } %>
-        </div>
-      </section>
+    <script type="application/json" id="admin-chart-data"><%= chartDataJson %></script>
 
-      <section class="card">
-        <div class="card-header"><h2 class="card-title">Monthly Application Trend</h2></div>
-        <div class="card-content">
-          <% if (monthTrend.isEmpty()) { %>
-            <p class="tooltip-small">No trend data available.</p>
-          <% } else { %>
-          <div class="bar-list">
-            <% for (Map.Entry<String, Integer> m : monthTrend) {
-                 int width = (int) Math.round((m.getValue() * 100.0) / maxMonthCount);
-            %>
-            <div class="bar-row">
-              <div class="bar-meta"><span><%= m.getKey() %></span><span><%= m.getValue() %></span></div>
-              <div class="bar-track"><%
-                out.write("<div class=\"bar-fill\" style=\"width:");
-                out.print(width);
-                out.write("%;\"></div>");
-              %></div>
-            </div>
-            <% } %>
-          </div>
-          <% } %>
+    <section class="card card--workload">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">TA Workload Overview</h2>
+          <p class="card-subtitle">Accepted assignments per TA · warning at &ge; <%= TaWorkloadStats.ASSIGNED_JOBS_WARNING_THRESHOLD %></p>
         </div>
-      </section>
-    </section>
-
-    <section class="card">
-      <div class="card-header"><h2 class="card-title">TA Workload Overview</h2></div>
+      </div>
       <div class="card-content">
-        <p class="tooltip-small" style="margin-top:0">Only <strong>TA</strong> accounts. <strong>Assigned jobs</strong> = accepted applications. Warning when accepted &ge; <%= TaWorkloadStats.ASSIGNED_JOBS_WARNING_THRESHOLD %>.</p>
+        <div class="table-scroll">
         <table class="table table-workload">
           <thead>
             <tr>
@@ -281,6 +333,7 @@
             <% } %>
           </tbody>
         </table>
+        </div>
       </div>
     </section>
 
@@ -294,6 +347,23 @@
         </div>
 
         <div id="users" class="tab-content active">
+          <form method="post" action="<%= ctx %>/admin/users" class="create-user-form">
+            <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
+            <input type="hidden" name="action" value="createUser" />
+            <p class="tooltip-small" style="margin-top:0"><strong>Create user</strong> — TA or MO account with a unique email.</p>
+            <div class="create-user-grid">
+              <label>Name<br/><input type="text" name="name" required /></label>
+              <label>Email<br/><input type="email" name="email" required /></label>
+              <label>Password<br/><input type="password" name="password" required minlength="6" /></label>
+              <label>Role<br/>
+                <select name="role" required>
+                  <option value="TA">TA</option>
+                  <option value="MO">MO</option>
+                </select>
+              </label>
+              <button type="submit" class="button button-primary">Create user</button>
+            </div>
+          </form>
           <% if (users.isEmpty()) { %>
             <p class="tooltip-small">No registered users yet.</p>
           <% } else { %>
@@ -316,16 +386,19 @@
                 <td>
                   <div class="user-mgmt-actions">
                   <form method="post" action="<%= ctx %>/admin/users" class="inline-form" onsubmit="return confirm('Deactivate this user? They will not be able to log in.');">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
                     <input type="hidden" name="action" value="deactivate" />
                     <input type="hidden" name="userId" value="<%= u.id %>" />
                     <button type="submit" class="button" <%= u.active ? "" : "disabled" %>>Deactivate</button>
                   </form>
                   <form method="post" action="<%= ctx %>/admin/users" class="inline-form" onsubmit="return confirm('Activate this user? They will be able to log in again.');">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
                     <input type="hidden" name="action" value="activate" />
                     <input type="hidden" name="userId" value="<%= u.id %>" />
                     <button type="submit" class="button button-success" <%= u.active ? "disabled" : "" %>>Activate</button>
                   </form>
                   <form method="post" action="<%= ctx %>/admin/users" class="inline-form" onsubmit="return confirm('Permanently delete this user and their applications, profile, and CV files?');">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
                     <input type="hidden" name="action" value="delete" />
                     <input type="hidden" name="userId" value="<%= u.id %>" />
                     <button type="submit" class="button button-danger">Delete</button>
@@ -357,6 +430,7 @@
                 <td>
                   <a class="button button-outline" href="<%= ctx %>/admin/job-view?id=<%= mid %>">View</a>
                   <form method="post" action="<%= ctx %>/admin/jobs" style="display:inline" onsubmit="return confirm('Delete this job from jobs.json?');">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
                     <input type="hidden" name="action" value="delete" />
                     <input type="hidden" name="jobId" value="<%= mid %>" />
                     <button type="submit" class="button button-danger">Delete</button>
@@ -380,6 +454,45 @@
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="<%= ctx %>/static/js/admin-dashboard-charts.js"></script>
+  <% if (aiEnabled) { %>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="<%= ctx %>/static/js/ai-stream.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var ctx = '<%= ctx %>';
+    var panel = document.getElementById('admin-ai-panel');
+    if (!panel || typeof TaAiStream === 'undefined') return;
+    var loadingEl = panel.querySelector('.analytics-ai__loading');
+    var mdEl = panel.querySelector('.analytics-ai__md');
+    var text = '';
+    TaAiStream.consume(ctx + '/api/ai/stream?feature=adminAnalytics', {
+      onDelta: function (delta) {
+        text += delta;
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (mdEl) {
+          mdEl.style.display = 'block';
+          TaAiStream.renderMarkdown(mdEl, text, typeof marked !== 'undefined' ? marked : null);
+        }
+      },
+      onDone: function () {
+        if (!text && loadingEl) {
+          loadingEl.textContent = 'No analysis returned.';
+          loadingEl.style.display = 'block';
+        }
+      },
+      onError: function (err) {
+        if (loadingEl) {
+          loadingEl.className = 'analytics-ai__error';
+          loadingEl.textContent = err || 'AI analysis failed.';
+        }
+      }
+    });
+  })();
+  </script>
+  <% } %>
   <script>
     function showTab(tabName) {
       document.querySelectorAll('.tab-btn').forEach(function (btn) {

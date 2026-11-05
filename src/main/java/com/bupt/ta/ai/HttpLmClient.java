@@ -48,10 +48,29 @@ public final class HttpLmClient implements LmClient {
     private static final Logger LOG = Logger.getLogger(HttpLmClient.class.getName());
     private final LmConfig config;
 
+    /**
+     * Creates an HTTP client bound to the given LM configuration.
+     *
+     * @param config settings loaded via {@link LmConfig#load}; must not be {@code null}
+     */
     public HttpLmClient(LmConfig config) {
         this.config = config;
     }
 
+    /**
+     * Performs a synchronous Chat Completions request and returns a normalised response.
+     *
+     * <p>Builds an OpenAI-compatible JSON body from {@link LmRequest#getMessages()} or,
+     * when empty, from {@link LmRequest#getSystemPrompt()} and {@link LmRequest#getUserPrompt()}.
+     * Posts to {@code baseUrl + httpChatPath} with a Bearer token from {@link LmConfig#getApiKey()}.
+     *
+     * @param request completion parameters and prompts; must not be {@code null}
+     * @return {@link LmResponse} with assistant text on success, or {@code success=false} with
+     *         {@link LmResponse#getErrorMessage()} when the provider returns an error object or
+     *         assistant text cannot be parsed
+     * @throws LmException if {@link LmConfig#hasHttpCredentials()} is {@code false}, JSON body
+     *                     construction fails, or the HTTP transport throws
+     */
     @Override
     public LmResponse generate(LmRequest request) throws LmException {
         requireCredentials();

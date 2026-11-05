@@ -1,9 +1,3 @@
-/*
-功能：
-/job → list
-/job?id=xxx → detail
-POST action=toggleFavorite → save/unsave job
-*/
 package com.bupt.ta.servlet;
 
 import com.bupt.ta.ai.LmConfig;
@@ -12,6 +6,7 @@ import com.bupt.ta.model.ApplicantProfile;
 import com.bupt.ta.model.Job;
 import com.bupt.ta.model.JobApplicationStats;
 import com.bupt.ta.model.User;
+import com.bupt.ta.persistence.ServiceFactory;
 import com.bupt.ta.service.ApplicationService;
 import com.bupt.ta.service.FavoriteService;
 import com.bupt.ta.service.JobService;
@@ -24,13 +19,26 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Serves the TA job listing, job detail pages, and favorite toggling.
+ *
+ * <p><b>URL pattern:</b> {@code /job}
+ *
+ * <p><b>Role access:</b> Authenticated users only (typically TA). Unauthenticated callers are
+ * redirected to {@code /login}.
+ *
+ * <ul>
+ *   <li>{@code GET /job} — published job list with search, sort, favorites, and AI state</li>
+ *   <li>{@code GET /job?id=xxx} — single job detail with application context</li>
+ *   <li>{@code POST /job?action=toggleFavorite} — save or unsave a job</li>
+ * </ul>
+ */
 @WebServlet("/job")
 public class JobServlet extends BaseServlet {
 
@@ -40,26 +48,37 @@ public class JobServlet extends BaseServlet {
     private ProfileService profileService;
     private ApplicationService applicationService;
 
+    /**
+     * Initializes job, favorite, profile, and application services from {@code WEB-INF/data}.
+     *
+     * @throws ServletException if servlet initialization fails
+     */
     @Override
     public void init() throws ServletException {
-        String dataDir = getServletContext().getRealPath("/WEB-INF/data");
-        String p = dataDir + "/jobs.json";
-        this.jobService = new JobService(p);
-        this.favoriteService = new FavoriteService(Paths.get(dataDir));
-        this.recentlyViewedService = new RecentlyViewedService(Paths.get(dataDir));
-        this.profileService = new ProfileService(Paths.get(dataDir));
-        this.applicationService = new ApplicationService(Paths.get(dataDir));
+        ServiceFactory f = (ServiceFactory) getServletContext().getAttribute(ServiceFactory.SERVLET_CONTEXT_KEY);
+        this.jobService = f.getJobService();
+        this.favoriteService = f.getFavoriteService();
+        this.recentlyViewedService = f.getRecentlyViewedService();
+        this.profileService = f.getProfileService();
+        this.applicationService = f.getApplicationService();
     }
 
+    /**
+     * Renders the job list or a single job detail depending on the {@code id} parameter.
+     *
+     * @param req  the incoming request; optional {@code id}, {@code q}, {@code sortBy}
+     * @param resp the response; redirects to {@code /login} when unauthenticated
+     * @throws ServletException if the JSP forward fails
+     * @throws IOException      if service calls fail
+     */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        User user = currentUser(req);
-        if (user == null) {
-            resp.sendRedirect(req.getContextPath() + "/login");
+        if (!ensureTa(req, resp)) {
             return;
         }
+        User user = currentUser(req);
 
         String id = req.getParameter("id");
 
@@ -105,14 +124,21 @@ public class JobServlet extends BaseServlet {
         }
     }
 
+    /**
+     * Toggles favorite status for a job ({@code action=toggleFavorite}).
+     *
+     * @param req  the incoming request; expects {@code action}, {@code jobId}, optional
+     *             {@code returnTo}, {@code q}, {@code sortBy}
+     * @param resp the response; redirects back to list or detail; returns 405 for unknown actions
+     * @throws IOException if favorite persistence fails
+     */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        User user = currentUser(req);
         String ctx = req.getContextPath();
-        if (user == null) {
-            resp.sendRedirect(ctx + "/login");
+        if (!ensureTa(req, resp)) {
             return;
         }
+        User user = currentUser(req);
 
         if (!"toggleFavorite".equals(req.getParameter("action"))) {
             resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);

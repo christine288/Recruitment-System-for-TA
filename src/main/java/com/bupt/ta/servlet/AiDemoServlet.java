@@ -28,6 +28,9 @@ public class AiDemoServlet extends BaseServlet {
     private LmConfig lmConfig;
     private AiFeatureService aiFeature;
 
+    /**
+     * Loads LM configuration and constructs {@link AiFeatureService}.
+     */
     @Override
     public void init() {
         lmConfig = LmConfig.load(getServletContext());
@@ -35,6 +38,14 @@ public class AiDemoServlet extends BaseServlet {
         aiFeature = new AiFeatureService(lmConfig, client);
     }
 
+    /**
+     * Renders the AI demo page with LM provider metadata.
+     *
+     * @param req  the incoming request
+     * @param resp the response; 403 or redirect when not admin
+     * @throws ServletException if the JSP forward fails
+     * @throws IOException      if authorization check fails
+     */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         if (!ensureAdmin(req, resp)) {
@@ -44,6 +55,15 @@ public class AiDemoServlet extends BaseServlet {
         req.getRequestDispatcher("/WEB-INF/jsp/admin/ai-demo.jsp").forward(req, resp);
     }
 
+    /**
+     * Executes a selected AI demo action and re-renders the page with results.
+     *
+     * @param req  the incoming request; {@code action} is {@code match}, {@code missing}, or
+     *             {@code recommend}, plus feature-specific text parameters
+     * @param resp the response; 403 or redirect when not admin
+     * @throws ServletException if the JSP forward fails
+     * @throws IOException      if authorization check fails
+     */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         if (!ensureAdmin(req, resp)) {

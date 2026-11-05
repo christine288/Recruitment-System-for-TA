@@ -234,6 +234,7 @@
           </div>
           <div class="detail-actions detail-actions--aside">
             <form method="post" action="<%= ctx %>/applications" id="applyForm">
+              <input type="hidden" name="csrfToken" value="<%= com.bupt.ta.security.CsrfFilter.csrfToken(request) %>" />
               <input type="hidden" name="jobId"      value="<%= job.getId() == null ? "" : job.getId() %>" />
               <input type="hidden" name="moduleName" value="<%= job.getModuleName() == null ? "" : job.getModuleName().replace("\"","&quot;") %>" />
               <input type="hidden" name="moduleCode" value="<%= job.getModuleCode() == null ? "" : job.getModuleCode().replace("\"","&quot;") %>" />
@@ -256,6 +257,7 @@
             </div>
             <% } %>
             <form method="post" action="<%= ctx %>/job">
+              <input type="hidden" name="csrfToken" value="<%= com.bupt.ta.security.CsrfFilter.csrfToken(request) %>" />
               <input type="hidden" name="action" value="toggleFavorite" />
               <input type="hidden" name="jobId" value="<%= job.getId() == null ? "" : job.getId() %>" />
               <button type="submit" class="btn btn-favorite"><%= jobFavorited.booleanValue() ? "Remove from Favorites" : "Save Job" %></button>

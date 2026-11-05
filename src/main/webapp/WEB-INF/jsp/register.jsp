@@ -39,6 +39,7 @@
       <% } %>
 
       <form class="form" method="post" action="${pageContext.request.contextPath}/register" novalidate>
+        <input type="hidden" name="csrfToken" value="<%= com.bupt.ta.security.CsrfFilter.csrfToken(request) %>" />
         <div class="field">
           <label for="name">Full Name</label>
           <input id="name" name="name" type="text" required

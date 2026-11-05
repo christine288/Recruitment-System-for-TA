@@ -10,12 +10,37 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** Shared list search, sort, and favorited-only filter for job browsing. */
+/**
+ * Shared search, sort, and favorited-only filtering for published job browsing lists.
+ *
+ * <p>Used by TA-facing job servlets to apply query parameters consistently. Operates on in-memory
+ * {@link Job} lists already loaded from {@code jobs.json}; does not persist changes.
+ *
+ * <p>Thread-safe: static methods do not hold mutable state; callers should not mutate input lists
+ * concurrently during a filter operation.
+ */
 public final class JobListFilters {
 
     private JobListFilters() {
     }
 
+    /**
+     * Applies sort mode, optional favorited-only filter, text search, and sorting to a job list.
+     *
+     * <p>When {@code sortBy} is {@code "favorited"}, only jobs whose ids appear in
+     * {@code favoriteJobIds} are kept, then results are sorted by posting date (newest first).
+     * Empty or null {@code sortBy} defaults to {@code "postingDate"}.
+     *
+     * <p>Search ({@code q}) matches module name, activity type, or any required skill
+     * (case-insensitive substring).
+     *
+     * @param published       published jobs to filter; not modified in place—a new list is returned
+     * @param favoriteJobIds  set of favorited job ids for {@code "favorited"} mode; may be empty
+     * @param q               free-text search needle; null or empty skips search
+     * @param sortBy          sort key: {@code "moduleName"}, {@code "activityType"},
+     *                        {@code "favorited"}, or default posting date (newest first)
+     * @return filtered and sorted job list
+     */
     public static List<Job> apply(List<Job> published, Set<String> favoriteJobIds, String q, String sortBy) {
         String mode = safe(sortBy);
         if (mode.isEmpty()) {
@@ -70,8 +95,15 @@ public final class JobListFilters {
     }
 
     /**
-     * Puts recently viewed jobs (that appear in {@code jobs}) at the front, preserving
-     * {@code recentJobIds} order (most recent first), then the remaining jobs in their prior order.
+     * Moves recently viewed jobs to the front of the list while preserving relative order elsewhere.
+     *
+     * <p>Jobs are promoted in {@code recentJobIds} order (most recent id first). Only jobs
+     * present in both {@code jobs} and {@code recentJobIds} are moved; duplicates in
+     * {@code recentJobIds} are skipped after the first occurrence.
+     *
+     * @param jobs          full job list in current display order; may be {@code null}
+     * @param recentJobIds  job ids from most-recent to least-recent view; may be {@code null}
+     * @return reordered list, or the original {@code jobs} reference when nothing to promote
      */
     public static List<Job> promoteRecentlyViewed(List<Job> jobs, List<String> recentJobIds) {
         if (jobs == null || jobs.isEmpty() || recentJobIds == null || recentJobIds.isEmpty()) {

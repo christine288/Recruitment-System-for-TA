@@ -25,9 +25,14 @@ public enum LmProviderType {
 
     /** Offline deterministic client, only when explicitly configured. */
     MOCK,
-    /** OpenAI-compatible Chat Completions (HTTPS POST JSON). */
+
+    /** OpenAI-compatible Chat Completions over HTTPS POST with JSON body. */
     OPENAI,
-    /** Same HTTP pipeline as OPENAI; reserved for custom endpoints / headers (see {@link HttpLmClient} TODOs). */
+
+    /**
+     * Same HTTP pipeline as {@link #OPENAI}; intended for custom endpoints or vendor adapters.
+     * Vendor-specific differences should remain inside {@link HttpLmClient}.
+     */
     CUSTOM;
 
     /**

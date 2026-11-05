@@ -29,6 +29,7 @@
   }
 
   String ctx = request.getContextPath();
+  String csrfToken = com.bupt.ta.security.CsrfFilter.csrfToken(request);
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -120,6 +121,7 @@
                 <div class="admin-app-actions">
                   <% if ("pending".equals(statusBucket)) { %>
                   <form method="post" action="<%= ctx %>/admin/applications" class="inline-form admin-app-action-form" onsubmit="return confirm('Force accept this application (override MO)?');">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
                     <input type="hidden" name="action" value="forceAccept" />
                     <input type="hidden" name="appId" value="<%= aid %>" />
                     <input type="hidden" name="returnStatus" value="<%= statusBucket %>" />
@@ -127,6 +129,7 @@
                     <button type="submit" class="button button-success">Force accept</button>
                   </form>
                   <form method="post" action="<%= ctx %>/admin/applications" class="inline-form admin-app-action-form" onsubmit="return confirm('Force reject this application (override MO)?');">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
                     <input type="hidden" name="action" value="forceReject" />
                     <input type="hidden" name="appId" value="<%= aid %>" />
                     <input type="hidden" name="returnStatus" value="<%= statusBucket %>" />
@@ -135,6 +138,7 @@
                   </form>
                   <% } else if ("accepted".equals(statusBucket)) { %>
                   <form method="post" action="<%= ctx %>/admin/applications" class="inline-form admin-app-action-form" onsubmit="return confirm('Force reject and move this application back from accepted?');">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
                     <input type="hidden" name="action" value="forceReject" />
                     <input type="hidden" name="appId" value="<%= aid %>" />
                     <input type="hidden" name="returnStatus" value="<%= statusBucket %>" />
@@ -142,6 +146,7 @@
                     <button type="submit" class="button button-danger">Force reject</button>
                   </form>
                   <form method="post" action="<%= ctx %>/admin/applications" class="inline-form admin-app-action-form" onsubmit="return confirm('Move this application back to the pending queue (MO can review again)?');">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
                     <input type="hidden" name="action" value="forcePend" />
                     <input type="hidden" name="appId" value="<%= aid %>" />
                     <input type="hidden" name="returnStatus" value="<%= statusBucket %>" />
@@ -150,6 +155,7 @@
                   </form>
                   <% } else if ("rejected".equals(statusBucket)) { %>
                   <form method="post" action="<%= ctx %>/admin/applications" class="inline-form admin-app-action-form" onsubmit="return confirm('Force accept this application again (from rejected)?');">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
                     <input type="hidden" name="action" value="forceAccept" />
                     <input type="hidden" name="appId" value="<%= aid %>" />
                     <input type="hidden" name="returnStatus" value="<%= statusBucket %>" />
@@ -157,6 +163,7 @@
                     <button type="submit" class="button button-success">Force accept</button>
                   </form>
                   <form method="post" action="<%= ctx %>/admin/applications" class="inline-form admin-app-action-form" onsubmit="return confirm('Move this application back to the pending queue (MO can review again)?');">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>" />
                     <input type="hidden" name="action" value="forcePend" />
                     <input type="hidden" name="appId" value="<%= aid %>" />
                     <input type="hidden" name="returnStatus" value="<%= statusBucket %>" />

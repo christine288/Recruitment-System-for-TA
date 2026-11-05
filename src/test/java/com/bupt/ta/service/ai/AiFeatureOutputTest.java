@@ -34,4 +34,18 @@ class AiFeatureOutputTest {
         assertFalse(o.isSuccess());
         assertTrue(o.getErrorMessage().contains("Empty"));
     }
+
+    @Test
+    void disabled_returnsExpectedMessage() {
+        AiFeatureOutput o = AiFeatureOutput.disabled();
+        assertFalse(o.isSuccess());
+        assertTrue(o.getErrorMessage().contains("disabled"));
+    }
+
+    @Test
+    void error_customMessage() {
+        AiFeatureOutput o = AiFeatureOutput.error("custom failure");
+        assertFalse(o.isSuccess());
+        assertEquals("custom failure", o.getErrorMessage());
+    }
 }

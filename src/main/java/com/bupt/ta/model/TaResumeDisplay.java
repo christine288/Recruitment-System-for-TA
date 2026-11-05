@@ -4,14 +4,36 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** One TA user plus optional applicant profile (for admin read-only resume list). */
+/**
+ * View model combining a TA {@link User}, optional {@link ApplicantProfile}, and parsed
+ * education rows for admin read-only resume listing.
+ *
+ * <p>Constructed by admin servlets/services at request time; not persisted. {@link #visibleEducation}
+ * filters out blank education rows; {@link #hasSavedProfile} indicates whether a non-empty profile
+ * exists on disk for the user.
+ *
+ * <p>Not thread-safe: list fields are unmodifiable or copies; safe to expose to JSP if not
+ * mutated after construction.
+ */
 public class TaResumeDisplay {
+    /** Account record for the TA user. */
     public final User user;
+    /** Applicant profile; never {@code null} (empty shell used when missing). */
     public final ApplicantProfile profile;
+    /** Full parsed education list from the profile JSON. */
     public final List<EducationEntry> education;
+    /** Education rows with at least one non-blank field, for compact display. */
     public final List<EducationEntry> visibleEducation;
+    /** {@code true} when a persisted profile with meaningful content exists for this user. */
     public final boolean hasSavedProfile;
 
+    /**
+     * Builds a display DTO, normalizing null profile and education inputs.
+     *
+     * @param user      TA user account (required for display)
+     * @param profile   applicant profile, or {@code null} if none saved
+     * @param education parsed education entries, or {@code null} if none
+     */
     public TaResumeDisplay(User user, ApplicantProfile profile, List<EducationEntry> education) {
         this.user = user;
         this.profile = profile != null ? profile : new ApplicantProfile();
@@ -42,6 +64,11 @@ public class TaResumeDisplay {
         return s != null && !s.trim().isEmpty();
     }
 
+    /**
+     * Returns whether education rows are present for display.
+     *
+     * @return {@code true} if {@link #visibleEducation} contains at least one row
+     */
     public boolean hasEducationRows() {
         return !visibleEducation.isEmpty();
     }
