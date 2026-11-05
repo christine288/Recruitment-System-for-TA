@@ -2,9 +2,6 @@ package com.bupt.ta.ai;
 
 import java.util.logging.Logger;
 
-<<<<<<< Updated upstream
-/** Selects mock vs HTTP implementation based on {@link LmConfig} (safe defaults). */
-=======
 /**
  * Factory for creating the appropriate {@link LmClient} implementation from {@link LmConfig}.
  *
@@ -24,14 +21,11 @@ import java.util.logging.Logger;
  * @see LmConfig
  * @see LmClient
  */
->>>>>>> Stashed changes
 public final class LmClientFactory {
     private static final Logger LOG = Logger.getLogger(LmClientFactory.class.getName());
 
     private LmClientFactory() {}
 
-<<<<<<< Updated upstream
-=======
     /**
      * Creates an {@link LmClient} matching the supplied configuration.
      *
@@ -39,7 +33,6 @@ public final class LmClientFactory {
      * @return a non-null {@link LmClient} ready for {@link LmClient#generate(LmRequest)} or
      *         {@link LmClient#stream(LmRequest, LmStreamListener)}
      */
->>>>>>> Stashed changes
     public static LmClient create(LmConfig config) {
         if (config == null) {
             throw new IllegalArgumentException("LmConfig must not be null.");

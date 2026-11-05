@@ -17,10 +17,6 @@ public final class HttpJsonClient {
     private HttpJsonClient() {}
 
     /**
-<<<<<<< Updated upstream
-     * POST JSON and return the response body as a stream (for SSE / chunked completions).
-     * Caller must close the stream. On non-2xx, throws with body snippet in message.
-=======
      * POSTs JSON to {@code url} and returns the response body as a stream for SSE or chunked reads.
      *
      * <p>Sets {@code Accept: text/event-stream} and {@code Content-Type: application/json}.
@@ -36,7 +32,6 @@ public final class HttpJsonClient {
      * @return response body input stream on success (2xx)
      * @throws IOException          on I/O failure or non-2xx HTTP status
      * @throws InterruptedException if the HTTP send is interrupted
->>>>>>> Stashed changes
      */
     public static InputStream postJsonStream(String url, Map<String, String> headers, String body, int timeoutMs)
             throws IOException, InterruptedException {

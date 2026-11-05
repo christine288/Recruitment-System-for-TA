@@ -7,9 +7,6 @@ import javax.servlet.ServletContext;
 import java.util.Properties;
 
 /**
-<<<<<<< Updated upstream
- * LM integration settings. Safe defaults: mock provider, no outbound HTTP required.
-=======
  * Immutable snapshot of language-model integration settings for the TA application.
  *
  * <p>{@link LmConfig} is the configuration hub of the LM layer. Settings are loaded once
@@ -38,7 +35,6 @@ import java.util.Properties;
  *
  * @see LmClientFactory#create(LmConfig)
  * @see HttpLmClient
->>>>>>> Stashed changes
  */
 public final class LmConfig {
     public static final String DOUBAO_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
@@ -63,8 +59,6 @@ public final class LmConfig {
         this.httpChatPath = httpChatPath != null && !httpChatPath.isEmpty() ? httpChatPath : "/chat/completions";
     }
 
-<<<<<<< Updated upstream
-=======
     /**
      * Loads LM settings from {@code WEB-INF/lm.properties} and environment variables.
      *
@@ -76,7 +70,6 @@ public final class LmConfig {
      * @param ctx servlet context used to locate {@code WEB-INF/lm.properties}; must not be {@code null}
      * @return a fully constructed {@link LmConfig} with defaults for missing optional values
      */
->>>>>>> Stashed changes
     public static LmConfig load(ServletContext ctx) {
         Properties p = AppConfig.loadWebInfProperties(ctx, "lm.properties");
         String enabledStr = AppConfig.resolve(
@@ -175,8 +168,6 @@ public final class LmConfig {
         return baseUrl;
     }
 
-<<<<<<< Updated upstream
-=======
     /**
      * Returns the default model name ({@code LM_MODEL}) for requests that do not specify one.
      *
@@ -184,20 +175,16 @@ public final class LmConfig {
      *
      * @return trimmed model identifier, or empty string when not configured
      */
->>>>>>> Stashed changes
     public String getModel() {
         return model;
     }
 
-<<<<<<< Updated upstream
-=======
     /**
      * Returns the connect and non-streaming request timeout in milliseconds
      * ({@code LM_TIMEOUT_MS}). Streaming requests have a 180-second minimum.
      *
      * @return timeout value; defaults to {@code 30000} when unset or unparsable
      */
->>>>>>> Stashed changes
     public int getTimeoutMs() {
         return timeoutMs;
     }
@@ -206,9 +193,6 @@ public final class LmConfig {
         return httpChatPath;
     }
 
-<<<<<<< Updated upstream
-    /** True when HTTP provider could attempt a real call (still subject to runtime errors). */
-=======
     /**
      * Indicates whether an HTTP provider has the minimum credentials to attempt a real call.
      *
@@ -218,7 +202,6 @@ public final class LmConfig {
      *
      * @return {@code true} when both API key and base URL are configured
      */
->>>>>>> Stashed changes
     public boolean hasHttpCredentials() {
         return !apiKey.isEmpty() && !baseUrl.isEmpty();
     }

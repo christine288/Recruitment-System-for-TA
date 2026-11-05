@@ -47,8 +47,6 @@ public final class LmRequest {
         return maxTokens;
     }
 
-<<<<<<< Updated upstream
-=======
     /**
      * Returns the per-request model override, if any.
      *
@@ -57,7 +55,6 @@ public final class LmRequest {
      *
      * @return model identifier, or empty string to defer to config/fallback
      */
->>>>>>> Stashed changes
     public String getModel() {
         return model;
     }

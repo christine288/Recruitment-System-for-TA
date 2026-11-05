@@ -1,11 +1,6 @@
 package com.bupt.ta.ai;
 
 /**
-<<<<<<< Updated upstream
- * Pluggable LM backend identifier. Extend with new vendors without changing servlet code.
- */
-public enum LmProviderType {
-=======
  * Identifies which language-model backend the application should use.
  *
  * <p>{@link LmProviderType} is resolved from the {@code LM_PROVIDER} configuration key
@@ -29,15 +24,12 @@ public enum LmProviderType {
     DOUBAO,
 
     /** Offline deterministic client, only when explicitly configured. */
->>>>>>> Stashed changes
     MOCK,
     /** OpenAI-compatible Chat Completions (HTTPS POST JSON). */
     OPENAI,
     /** Same HTTP pipeline as OPENAI; reserved for custom endpoints / headers (see {@link HttpLmClient} TODOs). */
     CUSTOM;
 
-<<<<<<< Updated upstream
-=======
     /**
      * Parses a configuration string into a provider type.
      *
@@ -48,7 +40,6 @@ public enum LmProviderType {
      * @param raw value from {@code LM_PROVIDER} / {@code lm.provider}; may be {@code null}
      * @return the corresponding {@link LmProviderType}, never {@code null}
      */
->>>>>>> Stashed changes
     public static LmProviderType fromString(String raw) {
         if (raw == null || raw.trim().isEmpty()) {
             return DOUBAO;

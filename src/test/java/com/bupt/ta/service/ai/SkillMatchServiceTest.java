@@ -22,8 +22,6 @@ class SkillMatchServiceTest {
         assertTrue(r.isSuccess());
         assertTrue(r.getText().contains("Match score"));
     }
-<<<<<<< Updated upstream
-=======
 
     @Test
     void matchApplicantSkills_emptyInputsStillSucceed() throws LmException {
@@ -32,5 +30,4 @@ class SkillMatchServiceTest {
         LmResponse r = svc.matchApplicantSkills("", "");
         assertTrue(r.isSuccess());
     }
->>>>>>> Stashed changes
 }

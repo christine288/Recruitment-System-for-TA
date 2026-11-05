@@ -19,10 +19,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
-<<<<<<< Updated upstream
- * Generic HTTPS JSON provider skeleton (OpenAI-compatible Chat Completions shape).
- * Vendor-specific differences should stay inside this class (headers, URL, body, response parsing).
-=======
  * HTTPS JSON implementation of {@link LmClient} for OpenAI-compatible Chat Completions APIs.
  *
  * <p>{@link HttpLmClient} is the production-oriented backend of the LM integration layer.
@@ -47,7 +43,6 @@ import java.util.logging.Logger;
  *
  * @see LmClientFactory
  * @see LmConfig
->>>>>>> Stashed changes
  */
 public final class HttpLmClient implements LmClient {
     private static final Logger LOG = Logger.getLogger(HttpLmClient.class.getName());
@@ -80,8 +75,6 @@ public final class HttpLmClient implements LmClient {
         }
     }
 
-<<<<<<< Updated upstream
-=======
     /**
      * Streams a Chat Completions response via Server-Sent Events (SSE).
      *
@@ -95,7 +88,6 @@ public final class HttpLmClient implements LmClient {
      * @throws LmException if credentials are missing, the request body cannot be built, or
      *                     streaming I/O fails before a terminal listener callback
      */
->>>>>>> Stashed changes
     @Override
     public void stream(LmRequest request, LmStreamListener listener) throws LmException {
         requireCredentials();
