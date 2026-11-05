@@ -1,0 +1,28 @@
+services:
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      SMTP_FROM: noreply@bupt.local
+      LM_ENABLED: "true"
+      LM_PROVIDER: doubao
+      ARK_API_KEY: ${ARK_API_KEY:-}
+      ARK_MODEL: ${ARK_MODEL:-}
+      LM_API_KEY: ${LM_API_KEY:-}
+      LM_MODEL: ${LM_MODEL:-}
+    volumes:
+      - cvdata:/usr/local/tomcat/webapps/ta-recruitment/WEB-INF/data/cv
+      - appdata:/usr/local/tomcat/webapps/ta-recruitment/WEB-INF/data
+
+volumes:
+  cvdata:
+  appdata:

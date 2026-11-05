@@ -284,7 +284,9 @@
     document.getElementById('aiMatchMd').innerHTML = '';
     document.getElementById('aiGapMd').innerHTML = '';
     document.getElementById('aiMatchErr').style.display = 'none';
+    document.getElementById('aiMatchErr').textContent = '';
     document.getElementById('aiGapErr').style.display = 'none';
+    document.getElementById('aiGapErr').textContent = '';
     document.getElementById('aiMatchModel').textContent = '';
     document.getElementById('aiGapModel').textContent = '';
     document.getElementById('aiMatchPanel').className = 'ai-panel ai-panel--ok';
@@ -295,13 +297,54 @@
     panels.style.display = 'block';
     reBtn.style.display = 'inline-flex';
     resetPanels();
-    document.getElementById('aiMatchHint').style.display = 'block';
-    document.getElementById('aiGapHint').style.display = 'none';
+    var matchHint = document.getElementById('aiMatchHint');
+    var gapHint = document.getElementById('aiGapHint');
+    var matchErr = document.getElementById('aiMatchErr');
+    var gapErr = document.getElementById('aiGapErr');
+    var matchPanel = document.getElementById('aiMatchPanel');
+    var gapPanel = document.getElementById('aiGapPanel');
+    matchHint.style.display = 'block';
+    gapHint.textContent = 'Waiting for Skill Match…';
+    gapHint.style.display = 'block';
     analyzeBtn.disabled = true;
     reBtn.disabled = true;
 
     var matchText = '';
     var gapText = '';
+    function finishAnalysis() {
+      analyzeBtn.disabled = false;
+      reBtn.disabled = false;
+    }
+
+    function startGapStream() {
+      gapHint.textContent = 'Streaming…';
+      var paramsG = new URLSearchParams();
+      paramsG.set('feature', 'missingSkills');
+      paramsG.set('jobId', jobId);
+      TaAiStream.consume(ctx + '/api/ai/stream?' + paramsG.toString(), {
+        onMeta: function (m) { document.getElementById('aiGapModel').textContent = m || ''; },
+        onDelta: function (d) {
+          gapText += d;
+          TaAiStream.renderMarkdown(document.getElementById('aiGapMd'), gapText, typeof marked !== 'undefined' ? marked : null);
+        },
+        onDone: function () {
+          gapHint.style.display = 'none';
+          if (!gapText.trim()) {
+            gapErr.style.display = 'block';
+            gapErr.textContent = 'No skill-gap guidance was returned. Please re-analyze.';
+          }
+          finishAnalysis();
+        },
+        onError: function (e) {
+          gapHint.style.display = 'none';
+          gapErr.style.display = 'block';
+          gapErr.textContent = e || 'Skill-gap guidance failed. Please re-analyze.';
+          gapPanel.className = 'ai-panel ai-panel--err';
+          finishAnalysis();
+        }
+      });
+    }
+
     var paramsM = new URLSearchParams();
     paramsM.set('feature', 'skillMatch');
     paramsM.set('jobId', jobId);
@@ -313,41 +356,20 @@
         TaAiStream.renderMarkdown(document.getElementById('aiMatchMd'), matchText, typeof marked !== 'undefined' ? marked : null);
       },
       onDone: function () {
-        document.getElementById('aiMatchHint').style.display = 'none';
-        document.getElementById('aiGapHint').style.display = 'block';
-        var paramsG = new URLSearchParams();
-        paramsG.set('feature', 'missingSkills');
-        paramsG.set('jobId', jobId);
-        TaAiStream.consume(ctx + '/api/ai/stream?' + paramsG.toString(), {
-          onMeta: function (m) { document.getElementById('aiGapModel').textContent = m || ''; },
-          onDelta: function (d) {
-            gapText += d;
-            TaAiStream.renderMarkdown(document.getElementById('aiGapMd'), gapText, typeof marked !== 'undefined' ? marked : null);
-          },
-          onDone: function () {
-            document.getElementById('aiGapHint').style.display = 'none';
-            analyzeBtn.disabled = false;
-            reBtn.disabled = false;
-          },
-          onError: function (e) {
-            document.getElementById('aiGapHint').style.display = 'none';
-            var ge = document.getElementById('aiGapErr');
-            ge.style.display = 'block';
-            ge.textContent = e;
-            document.getElementById('aiGapPanel').className = 'ai-panel ai-panel--err';
-            analyzeBtn.disabled = false;
-            reBtn.disabled = false;
-          }
-        });
+        matchHint.style.display = 'none';
+        if (!matchText.trim()) {
+          matchErr.style.display = 'block';
+          matchErr.textContent = 'No skill-match analysis was returned. Please re-analyze.';
+          matchPanel.className = 'ai-panel ai-panel--warn';
+        }
+        startGapStream();
       },
       onError: function (e) {
-        document.getElementById('aiMatchHint').style.display = 'none';
-        var me = document.getElementById('aiMatchErr');
-        me.style.display = 'block';
-        me.textContent = e;
-        document.getElementById('aiMatchPanel').className = 'ai-panel ai-panel--err';
-        analyzeBtn.disabled = false;
-        reBtn.disabled = false;
+        matchHint.style.display = 'none';
+        matchErr.style.display = 'block';
+        matchErr.textContent = e || 'Skill-match analysis failed. Please re-analyze.';
+        matchPanel.className = 'ai-panel ai-panel--err';
+        startGapStream();
       }
     });
   }

@@ -13,7 +13,18 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
+<<<<<<< Updated upstream
  * Minimal admin-only demo for AI scaffolding (mock by default). Keeps LM calls out of JSP.
+=======
+ * Admin-only interactive page for the configured AI provider (Doubao by default).
+ *
+ * <p><b>URL pattern:</b> {@code /admin/ai-demo}
+ *
+ * <p><b>Role access:</b> {@link com.bupt.ta.model.Roles#ADMIN} only via {@link #ensureAdmin}.
+ *
+ * <p>GET shows the demo form; POST invokes skill match, missing-skill, or job-recommendation
+ * features and displays structured results. Keeps LM calls out of JSP.
+>>>>>>> Stashed changes
  */
 @WebServlet(urlPatterns = {"/admin/ai-demo"})
 public class AiDemoServlet extends BaseServlet {

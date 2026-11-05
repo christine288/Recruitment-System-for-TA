@@ -31,7 +31,7 @@ class AiFeatureServiceTest {
 
     @Test
     void identifyMissingSkills_mockPipeline() {
-        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties(null));
+        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties("LM_PROVIDER=mock\n"));
         AiFeatureService svc = new AiFeatureService(cfg, LmClientFactory.create(cfg));
         AiFeatureOutput out = svc.identifyMissingSkills("Java", "Java, Kubernetes");
         assertTrue(out.isSuccess());
@@ -40,7 +40,7 @@ class AiFeatureServiceTest {
 
     @Test
     void recommendJobs_mockPipeline() {
-        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties(null));
+        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties("LM_PROVIDER=mock\n"));
         AiFeatureService svc = new AiFeatureService(cfg, LmClientFactory.create(cfg));
         AiFeatureOutput out = svc.recommendJobs("Java student", "CS101 TA\nCS202 TA");
         assertTrue(out.isSuccess());
@@ -49,7 +49,7 @@ class AiFeatureServiceTest {
 
     @Test
     void adviseMoOnWorkload_mockPipeline() {
-        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties(null));
+        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties("LM_PROVIDER=mock\n"));
         AiFeatureService svc = new AiFeatureService(cfg, LmClientFactory.create(cfg));
         com.bupt.ta.model.MoWorkloadSnapshot snap = new com.bupt.ta.model.MoWorkloadSnapshot();
         snap.acceptedCount = 2;

@@ -35,7 +35,7 @@ public final class SkillMatchService {
                         + AiLmDefaults.nz(jobRequirements))
                 .temperature(0.2d)
                 .maxTokens(512)
-                .model(AiLmDefaults.modelOrFallback(config))
+                .model(AiLmDefaults.configuredModel(config))
                 .build();
     }
 }

@@ -43,6 +43,24 @@
       <version>5.11.0</version>
       <scope>test</scope>
     </dependency>
+<<<<<<< Updated upstream
+=======
+    <dependency>
+      <groupId>com.sun.mail</groupId>
+      <artifactId>javax.mail</artifactId>
+      <version>1.6.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mindrot</groupId>
+      <artifactId>jbcrypt</artifactId>
+      <version>0.4</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.11.0</version>
+    </dependency>
+>>>>>>> Stashed changes
   </dependencies>
 
   <build>
@@ -68,6 +86,8 @@
         <version>3.4.0</version>
         <configuration>
           <failOnMissingWebXml>false</failOnMissingWebXml>
+        <warSourceExcludes>WEB-INF/lm.properties</warSourceExcludes>
+        <packagingExcludes>WEB-INF/lm.properties</packagingExcludes>
         </configuration>
       </plugin>
       <plugin>

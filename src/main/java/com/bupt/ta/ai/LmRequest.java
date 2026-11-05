@@ -47,6 +47,17 @@ public final class LmRequest {
         return maxTokens;
     }
 
+<<<<<<< Updated upstream
+=======
+    /**
+     * Returns the per-request model override, if any.
+     *
+     * <p>When blank, {@link HttpLmClient} uses {@link LmConfig#getModel()} and reports an
+     * error if that is also blank. {@link MockLmClient} uses {@code "mock-model"} when blank.
+     *
+     * @return model identifier, or empty string to defer to config/fallback
+     */
+>>>>>>> Stashed changes
     public String getModel() {
         return model;
     }

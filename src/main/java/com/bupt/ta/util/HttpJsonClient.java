@@ -12,12 +12,31 @@ import java.util.Map;
 
 /** Minimal HTTPS JSON POST helper (JDK 11 {@link java.net.http.HttpClient}) — no extra libraries. */
 public final class HttpJsonClient {
+    private static final int MIN_STREAM_REQUEST_TIMEOUT_MS = 180_000;
 
     private HttpJsonClient() {}
 
     /**
+<<<<<<< Updated upstream
      * POST JSON and return the response body as a stream (for SSE / chunked completions).
      * Caller must close the stream. On non-2xx, throws with body snippet in message.
+=======
+     * POSTs JSON to {@code url} and returns the response body as a stream for SSE or chunked reads.
+     *
+     * <p>Sets {@code Accept: text/event-stream} and {@code Content-Type: application/json}.
+     * The caller must close the returned stream. On non-2xx responses, throws {@link IOException}
+     * with an HTTP status and a snippet of the error body (up to 4,000 characters).
+     *
+     * @param url       target HTTPS endpoint
+     * @param headers   optional extra request headers; null keys or values are skipped
+     * @param body      JSON request body; null is sent as empty string
+     * @param timeoutMs connect timeout in milliseconds (minimum 1,000 ms enforced); the
+     *                  streaming request gets at least 180,000 ms so a long response is not
+     *                  cut off by the ordinary short JSON request timeout
+     * @return response body input stream on success (2xx)
+     * @throws IOException          on I/O failure or non-2xx HTTP status
+     * @throws InterruptedException if the HTTP send is interrupted
+>>>>>>> Stashed changes
      */
     public static InputStream postJsonStream(String url, Map<String, String> headers, String body, int timeoutMs)
             throws IOException, InterruptedException {
@@ -27,7 +46,7 @@ public final class HttpJsonClient {
                 .build();
         HttpRequest.Builder b = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .timeout(Duration.ofMillis(t))
+                .timeout(Duration.ofMillis(Math.max(t, MIN_STREAM_REQUEST_TIMEOUT_MS)))
                 .POST(HttpRequest.BodyPublishers.ofString(body == null ? "" : body, StandardCharsets.UTF_8))
                 .header("Accept", "text/event-stream")
                 .header("Content-Type", "application/json; charset=utf-8");

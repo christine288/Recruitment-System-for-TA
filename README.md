@@ -19,6 +19,7 @@ The system is developed following **Agile software development methods**.
 
 ## Tech Stack
 
+<<<<<<< Updated upstream
 
 | Layer         | Technology                                                           |
 | ------------- | -------------------------------------------------------------------- |
@@ -29,6 +30,19 @@ The system is developed following **Agile software development methods**.
 | Build         | Maven (`mvn clean package`, `mvn test`, `mvn tomcat7:run-war`) |
 | Dependencies  | `javax.servlet-api 4.0.1` (provided by Tomcat), `jstl 1.2`           |
 
+=======
+| Layer | Technology |
+|-------|------------|
+| Language | Java 11 |
+| Web | Java Servlet 4.0, JSP 2.3, JSTL 1.2 |
+| Server | Apache Tomcat 9.x |
+| Persistence | Plain JSON files + CV files on disk (`FileStore` in `com.bupt.ta.service`) |
+| Security | BCrypt (`jbcrypt`), CSRF filter on POST, role-based access |
+| Email | JavaMail — optional SMTP (MailHog in Docker Compose) |
+| AI | Doubao via Volcengine Ark Chat Completions; explicit offline mock for tests |
+| Build / test | Maven 3.9+, JUnit 5, Mockito |
+| CI | GitHub Actions — `mvn clean verify` |
+>>>>>>> Stashed changes
 
 ---
 
@@ -118,9 +132,23 @@ mvn tomcat7:run-war
 
 Open: [http://localhost:18080/ta-recruitment/login](http://localhost:18080/ta-recruitment/login)
 
+<<<<<<< Updated upstream
 Press `Ctrl+C` to stop.
 
 ### Deploy to an external Tomcat 9
+=======
+For a local Doubao run using `ARK_API_KEY` and `ARK_MODEL` in the root `.env`, use:
+
+```bash
+python3 tools/run-local.py
+```
+
+The plain Maven command does not read `.env`, and `run-war` excludes the local
+`WEB-INF/lm.properties` file. This helper passes the two Ark settings to Tomcat
+as environment variables and skips tests that would inherit live credentials.
+
+### Deploy to external Tomcat 9
+>>>>>>> Stashed changes
 
 1. `mvn clean package`
 2. Copy `target/ta-recruitment.war` to `{TOMCAT}/webapps/`
@@ -138,7 +166,54 @@ The `**/profile`** page (JSP: `profile.jsp`) is **English**. Applicants can:
 - List **courses completed** (one course per line), **availability**, and **skills**.
 - **Upload a CV** (multipart form, max ~10 MB); files are stored under `WEB-INF/data/cv/{userId}/` with the filename recorded on the profile.
 
+<<<<<<< Updated upstream
 On save, `**AuthService.updateUserBasics`** syncs **name**, **student ID**, and **email** to `users.json` (email must remain unique). `**CvDownloadServlet`** at `**/cv**` serves the current user’s uploaded file for preview/download.
+=======
+The login page lists demo accounts in a collapsible panel.
+
+| Walkthrough | Link |
+|-------------|------|
+| Step-by-step user guide (with screenshots) | [docs/USER_MANUAL.md](docs/USER_MANUAL.md) |
+
+---
+
+## Features by Role
+
+### TA applicant
+
+1. Register or log in → 2. Complete profile (CV optional) → 3. Browse/filter/favorite jobs on `/job` → 4. Apply from job detail → 5. Track or withdraw applications on `/applications`
+
+AI hints (when Doubao is configured): job recommendations, skill match, missing skills.
+
+### Module organiser
+
+1. Log in → 2. Open `/mo` dashboard → 3. Create/publish/edit/close vacancies → 4. Review applicant profile & CV → 5. Approve or reject with feedback
+
+MO users only see applications whose `moduleName` + `moduleCode` match **their own** job postings. AI aids: workload advice, processed-decision review.
+
+### Administrator
+
+1. Log in → 2. Open `/admin` (KPIs, charts, AI analytics briefing) → 3. Manage users/jobs/export from dashboard tabs → 4. Browse TA profiles → 5. Override application status or export CSV
+
+User management UI is on `/admin` → **User Management** tab. `/admin/users` is **POST-only** (direct GET returns HTTP 405).
+
+---
+
+## Applicant Profile & CV
+
+The `/profile` page (`profile.jsp`) lets applicants:
+
+- Enter personal information: full name, gender, degree, major, student ID, national ID, phone, email
+- Add multiple education entries (stored as JSON in `profiles.json` → `educationJson`)
+- List courses completed, availability, and skills
+- **Upload a CV (optional):** PDF, DOC, or DOCX, max ~10 MB → `WEB-INF/data/cv/{userId}/`
+
+**View vs edit:** incomplete profiles open in edit mode; complete profiles show read-only view with an **Edit** button. Saving returns to view mode.
+
+On save, `AuthService.updateUserBasics` syncs name, student ID, and email to `users.json`. `CvDownloadServlet` at `/cv` serves the logged-in TA’s CV; MO may pass `?userId=` to download an applicant’s file.
+
+Profile completeness is enforced by `ProfileService.isApplicantProfileComplete()` — **CV is not required** to apply.
+>>>>>>> Stashed changes
 
 ---
 
@@ -195,12 +270,17 @@ There is **no database**. The `FileStore` class reads and writes these files dir
 
 ## AI Integration / LM API Scaffold
 
+<<<<<<< Updated upstream
 This project includes a **small, pluggable LM (LLM) integration layer** for coursework and demos. It is **not** a production-grade AI product: there is no hard dependency on a specific vendor, and the default path is **fully offline**.
+=======
+The application uses **Doubao through Volcengine Ark** for AI features. It calls Ark's Chat Completions API from the Java server, so the API key is never sent to the browser. If credentials or the model are missing, the application reports a configuration error instead of generating a mock answer. AI output is **advisory** — hiring decisions remain human-reviewed. Ark's [Chat API documentation](https://docs.volcengine.com/docs/ark/chat-api?lang=zh) describes the request format and streaming responses.
+>>>>>>> Stashed changes
 
 ### What is implemented today
 
 - **Framework only**: unified request/response types (`LmRequest` / `LmResponse`), configuration (`LmConfig`), factory (`LmClientFactory`), and **mock** + **HTTP placeholder** providers.
 
+<<<<<<< Updated upstream
 - **Default provider**: `mock` — deterministic, explainable outputs; **no API key** and **no outbound network** required.
 - **HTTP provider**: `HttpLmClient` sends an **OpenAI Chat Completions–compatible** JSON body to `LM_BASE_URL` + `LM_HTTP_CHAT_PATH` and parses assistant text from the JSON response. Vendor-specific differences stay inside that class (marked with `TODO`).
 - **Business entry point**: `AiFeatureService` + thin services (`SkillMatchService`, `MissingSkillService`, `RecommendationService`) assemble prompts; **servlets do not call the LM client directly**.
@@ -209,6 +289,28 @@ This project includes a **small, pluggable LM (LLM) integration layer** for cour
 
 ### Planned / supported scenarios (coursework)
 
+=======
+| Key | Meaning | Default |
+|-----|---------|---------|
+| `LM_ENABLED` | Master switch | `true` |
+| `LM_PROVIDER` | `doubao` \| `mock` \| `openai` \| `custom` | `doubao` |
+| `ARK_API_KEY` | Volcengine Ark API key; `LM_API_KEY` is an alias | *(required for Doubao)* |
+| `ARK_MODEL` | Available Doubao Model ID or Endpoint ID; `LM_MODEL` is an alias | *(required for Doubao)* |
+| `LM_BASE_URL` | Ark API base URL; override for another region | `https://ark.cn-beijing.volces.com/api/v3` for Doubao |
+| `LM_TIMEOUT_MS` | HTTP connect and non-streaming timeout; SSE requests have a 180-second minimum | `30000` |
+| `LM_HTTP_CHAT_PATH` | Chat completions path | `/chat/completions` |
+
+Get an API key from Volcengine Ark and select a Doubao Model ID or Endpoint ID available to your account. Set `ARK_API_KEY` and `ARK_MODEL` as server environment variables before starting a deployed WAR. For source-based `tomcat7:run`, you can copy `src/main/webapp/WEB-INF/lm.properties.example` to `src/main/webapp/WEB-INF/lm.properties` and fill in its two blank values. Maven excludes the local properties file from packaged WARs so the key is not distributed with the app. Both the properties file and root `.env` files are Git-ignored; **never commit API keys**. See Ark's [authentication guide](https://docs.volcengine.com/docs/ark/base-url-and-authentication?lang=en) for API key setup.
+
+For Docker Compose, create a Git-ignored `.env` file in the repository root:
+
+```dotenv
+ARK_API_KEY=your-ark-api-key
+ARK_MODEL=your-available-doubao-model-or-endpoint-id
+```
+
+Then run `mvn clean package` and `docker compose up --build`. Compose passes those values into the app container. When testing without network access, set `LM_PROVIDER=mock` explicitly; mock mode produces deterministic demo content. The `openai` and `custom` providers remain available for other compatible APIs.
+>>>>>>> Stashed changes
 
 | Scenario                     | Purpose                                      | Status                                            |
 | ---------------------------- | -------------------------------------------- | ------------------------------------------------- |
@@ -217,7 +319,11 @@ This project includes a **small, pluggable LM (LLM) integration layer** for cour
 | Job recommendation           | Rank or explain fit for open roles           | Mock + prompts ready                              |
 
 
+<<<<<<< Updated upstream
 Treat all model output as **assistive**: combine with module rules, interviews, and manual review.
+=======
+LM-related tests live under `src/test/java/com/bupt/ta/ai/` and `…/service/ai/`. Unset global `ARK_*` and `LM_*` environment variables for deterministic local test runs.
+>>>>>>> Stashed changes
 
 ### Configuration (priority order)
 

@@ -36,7 +36,7 @@ public final class WorkloadAdviceService {
                 .userPrompt(buildUserPrompt(snapshot))
                 .temperature(0.25d)
                 .maxTokens(600)
-                .model(AiLmDefaults.modelOrFallback(config))
+                .model(AiLmDefaults.configuredModel(config))
                 .build();
     }
 

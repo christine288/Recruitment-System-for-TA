@@ -7,10 +7,12 @@
   AiFeatureOutput result = (AiFeatureOutput) request.getAttribute("result");
   String lastAction = (String) request.getAttribute("lastAction");
   if (lmEnabled == null) lmEnabled = Boolean.TRUE;
-  if (lmProvider == null) lmProvider = "mock";
+  if (lmProvider == null) lmProvider = "doubao";
   boolean isMockProvider = "mock".equalsIgnoreCase(lmProvider);
+  boolean isDoubaoProvider = "doubao".equalsIgnoreCase(lmProvider);
   String pageTitle = isMockProvider ? "AI Demo (Mock) — Admin" : "AI Demo — Admin";
-  String subtitle = isMockProvider ? "AI Demo — Mock / Scaffold" : "AI Demo — Provider / Scaffold";
+  String subtitle = isMockProvider ? "AI Demo — Offline Mock"
+      : isDoubaoProvider ? "AI Demo — Doubao via Volcengine Ark" : "AI Demo — Configured Provider";
 %>
 <%!
   private static String esc(String s) {
@@ -75,10 +77,11 @@
   <main class="container">
     <div class="ai-banner">
       <% if (isMockProvider) { %>
-      <strong>Mock / Demo</strong> — This page exercises the pluggable LM layer. Default provider is <code>mock</code> (offline, deterministic).
-      Configure <code>LM_PROVIDER</code> / <code>LM_API_KEY</code> when you are ready for real HTTP.
+      <strong>Offline Mock</strong> — This mode returns deterministic demo content. Set <code>LM_PROVIDER=doubao</code> and configure Ark credentials to use the real model.
+      <% } else if (isDoubaoProvider) { %>
+      <strong>Doubao via Volcengine Ark</strong> — AI requests use the server-side Ark API. Configure <code>ARK_API_KEY</code> and <code>ARK_MODEL</code> (or their <code>LM_*</code> aliases) on the server. Missing configuration is reported as an error.
       <% } else { %>
-      <strong>Provider Mode</strong> — This page uses your configured provider. Ensure <code>LM_BASE_URL</code> and <code>LM_API_KEY</code> are set correctly.
+      <strong>Configured Provider</strong> — AI requests use your configured HTTP provider. Ensure its URL, API key, and model are set correctly.
       <% } %>
       Status: LM_ENABLED=<%= esc(String.valueOf(lmEnabled)) %>, LM_PROVIDER=<code><%= esc(lmProvider) %></code>.
     </div>

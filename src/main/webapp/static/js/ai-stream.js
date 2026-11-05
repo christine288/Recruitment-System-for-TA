@@ -18,9 +18,27 @@
    * @param {{ onMeta?: (m:string)=>void, onDelta?: (d:string)=>void, onDone?: ()=>void, onError?: (e:string)=>void }} handlers
    */
   function consumeAiStream(url, handlers) {
+    var settled = false;
+
+    function fail(message) {
+      if (settled) return;
+      settled = true;
+      if (handlers.onError) handlers.onError(message);
+    }
+
+    function finish() {
+      if (settled) return;
+      settled = true;
+      if (handlers.onDone) handlers.onDone();
+    }
+
     return fetch(url, { credentials: 'same-origin' }).then(function (res) {
       if (!res.ok) {
-        if (handlers.onError) handlers.onError('HTTP ' + res.status);
+        fail('HTTP ' + res.status);
+        return;
+      }
+      if (!res.body || typeof res.body.getReader !== 'function') {
+        fail('AI streaming response is unavailable.');
         return;
       }
       var reader = res.body.getReader();
@@ -28,9 +46,11 @@
       var buf = '';
 
       function processBlock(block) {
+        if (settled) return;
         var lines = block.split('\n');
         var i;
         for (i = 0; i < lines.length; i++) {
+          if (settled) return;
           var line = lines[i].trim();
           if (line.indexOf('data:') !== 0) {
             continue;
@@ -46,10 +66,10 @@
             handlers.onMeta(decodeB64Utf8(obj.b64));
           } else if (obj.type === 'delta' && obj.b64 && handlers.onDelta) {
             handlers.onDelta(decodeB64Utf8(obj.b64));
-          } else if (obj.type === 'error' && obj.b64 && handlers.onError) {
-            handlers.onError(decodeB64Utf8(obj.b64));
-          } else if (obj.type === 'done' && handlers.onDone) {
-            handlers.onDone();
+          } else if (obj.type === 'error') {
+            fail(obj.b64 ? decodeB64Utf8(obj.b64) : 'AI request failed.');
+          } else if (obj.type === 'done') {
+            finish();
           }
         }
       }
@@ -57,9 +77,12 @@
       function pump() {
         return reader.read().then(function (result) {
           if (result.done) {
+            buf = (buf + dec.decode()).replace(/\r\n/g, '\n');
+            if (buf.trim()) processBlock(buf);
+            if (!settled) fail('AI stream ended before completion.');
             return;
           }
-          buf += dec.decode(result.value, { stream: true });
+          buf = (buf + dec.decode(result.value, { stream: true })).replace(/\r\n/g, '\n');
           var idx;
           while ((idx = buf.indexOf('\n\n')) >= 0) {
             var chunk = buf.slice(0, idx);
@@ -71,7 +94,7 @@
       }
       return pump();
     }).catch(function (err) {
-      if (handlers.onError) handlers.onError(err && err.message ? err.message : String(err));
+      fail(err && err.message ? err.message : String(err));
     });
   }
 

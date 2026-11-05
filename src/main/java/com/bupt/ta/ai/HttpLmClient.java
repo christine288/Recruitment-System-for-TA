@@ -1,20 +1,53 @@
 package com.bupt.ta.ai;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.bupt.ta.util.HttpJsonClient;
 import com.bupt.ta.util.Strings;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+<<<<<<< Updated upstream
  * Generic HTTPS JSON provider skeleton (OpenAI-compatible Chat Completions shape).
  * Vendor-specific differences should stay inside this class (headers, URL, body, response parsing).
+=======
+ * HTTPS JSON implementation of {@link LmClient} for OpenAI-compatible Chat Completions APIs.
+ *
+ * <p>{@link HttpLmClient} is the production-oriented backend of the LM integration layer.
+ * It is constructed by {@link LmClientFactory} for Doubao and other HTTP providers.
+ * All vendor-specific concerns—URL
+ * assembly, {@code Authorization} header, JSON body shape, response parsing, and SSE
+ * streaming—are encapsulated here so servlets and AI services only see {@link LmRequest}
+ * and {@link LmResponse}.
+ *
+ * <p><strong>Configuration used:</strong> {@link LmConfig#getBaseUrl()},
+ * {@link LmConfig#getHttpChatPath()}, {@link LmConfig#getApiKey()},
+ * {@link LmConfig#getTimeoutMs()}, and {@link LmConfig#getModel()} (with per-request
+ * override via {@link LmRequest#getModel()}).
+ *
+ * <p>If credentials or the model are missing, both
+ * {@link #generate(LmRequest)} and {@link #stream(LmRequest, LmStreamListener)} throw
+ * {@link LmException}. Provider error JSON is converted to unsuccessful {@link LmResponse}
+ * or {@link LmStreamListener#onError(String)} rather than returning mock content.
+ *
+ * <p>Vendor-specific differences (Azure api-version, Gemini/Claude adapters, custom headers)
+ * should stay inside this class; see inline TODO markers.
+ *
+ * @see LmClientFactory
+ * @see LmConfig
+>>>>>>> Stashed changes
  */
 public final class HttpLmClient implements LmClient {
     private static final Logger LOG = Logger.getLogger(HttpLmClient.class.getName());
@@ -26,16 +59,11 @@ public final class HttpLmClient implements LmClient {
 
     @Override
     public LmResponse generate(LmRequest request) throws LmException {
-        if (!config.hasHttpCredentials()) {
-            throw new LmException("HTTP LM requires LM_BASE_URL and LM_API_KEY.");
-        }
+        requireCredentials();
         String url = joinBaseAndPath(config.getBaseUrl(), config.getHttpChatPath());
-        String model = Strings.firstNonBlank(request.getModel(), config.getModel(), LmModelDefaults.CHAT_FALLBACK);
+        String model = resolveModel(request);
         String body;
         try {
-            // TODO(OPENAI): adjust field names if your vendor uses a different JSON schema.
-            // TODO(AZURE_OPENAI): add api-version query param and swap Authorization for api-key header.
-            // TODO(GEMINI/CLAUDE): replace buildOpenAiCompatibleChatBody + extractText with vendor-specific adapters.
             body = buildOpenAiCompatibleChatBody(request, model);
         } catch (Exception e) {
             throw new LmException("Failed to build request JSON: " + e.getMessage(), e);
@@ -43,33 +71,36 @@ public final class HttpLmClient implements LmClient {
 
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put("Authorization", "Bearer " + config.getApiKey());
-        // TODO(CUSTOM): inject extra headers here without touching servlets.
-
         try {
             String raw = HttpJsonClient.postJson(url, headers, body, config.getTimeoutMs());
-            if (raw != null && raw.contains("\"error\"")) {
-                String apiMsg = extractJsonStringValue(raw, "message", raw.indexOf("\"error\""));
-                return new LmResponse("", "http", model, false, raw,
-                        apiMsg != null ? apiMsg : "Provider returned an error object.");
-            }
-            String text = extractModelText(raw);
-            if (text == null || text.isEmpty()) {
-                return new LmResponse("", "http", model, false, raw, "Could not parse assistant text from HTTP response.");
-            }
-            return new LmResponse(text, "http", model, true, raw, null);
+            return parseCompletion(raw, model);
         } catch (Exception e) {
             LOG.log(Level.WARNING, "LM HTTP request failed: " + url, e);
             throw new LmException("LM HTTP request failed: " + e.getMessage(), e);
         }
     }
 
+<<<<<<< Updated upstream
+=======
+    /**
+     * Streams a Chat Completions response via Server-Sent Events (SSE).
+     *
+     * <p>Sends {@code "stream": true} in the request body, reads {@code data:} lines from the
+     * response, forwards {@code delta.content} fragments to {@link LmStreamListener#onDelta(String)},
+     * and completes on {@code [DONE]}. A premature end-of-stream or provider error invokes
+     * {@link LmStreamListener#onError(String)} without throwing.
+     *
+     * @param request  same shape as {@link #generate(LmRequest)}
+     * @param listener streaming callbacks; must not be {@code null}
+     * @throws LmException if credentials are missing, the request body cannot be built, or
+     *                     streaming I/O fails before a terminal listener callback
+     */
+>>>>>>> Stashed changes
     @Override
     public void stream(LmRequest request, LmStreamListener listener) throws LmException {
-        if (!config.hasHttpCredentials()) {
-            throw new LmException("HTTP LM requires LM_BASE_URL and LM_API_KEY.");
-        }
+        requireCredentials();
         String url = joinBaseAndPath(config.getBaseUrl(), config.getHttpChatPath());
-        String model = Strings.firstNonBlank(request.getModel(), config.getModel(), LmModelDefaults.CHAT_FALLBACK);
+        String model = resolveModel(request);
         String body;
         try {
             body = buildOpenAiCompatibleChatBodyStream(request, model);
@@ -95,27 +126,64 @@ public final class HttpLmClient implements LmClient {
                     listener.onComplete(lastModel);
                     return;
                 }
-                if (payload.contains("\"error\"")) {
-                    int errIdx = payload.indexOf("\"error\"");
-                    String apiMsg = extractJsonStringValue(payload, "message", errIdx >= 0 ? errIdx : 0);
-                    listener.onError(apiMsg != null ? apiMsg : payload);
+                try {
+                    JsonObject event = JsonParser.parseString(payload).getAsJsonObject();
+                    String apiError = errorMessage(event);
+                    if (apiError != null) {
+                        listener.onError(apiError);
+                        return;
+                    }
+                    String eventModel = stringValue(event, "model");
+                    if (eventModel != null && !eventModel.isEmpty()) {
+                        lastModel = eventModel;
+                    }
+                    JsonObject delta = firstChoiceObject(event, "delta");
+                    String content = stringValue(delta, "content");
+                    if (content != null && !content.isEmpty()) {
+                        listener.onDelta(content);
+                    }
+                } catch (RuntimeException parseError) {
+                    listener.onError("Invalid JSON from AI provider.");
                     return;
                 }
-                String m = extractJsonStringValue(payload, "model", 0);
-                if (m != null && !m.isEmpty()) {
-                    lastModel = m;
-                }
-                int deltaIdx = payload.indexOf("\"delta\"");
-                String delta = extractJsonStringValue(payload, "content", deltaIdx >= 0 ? deltaIdx : 0);
-                if (delta != null && !delta.isEmpty()) {
-                    listener.onDelta(delta);
-                }
             }
-            listener.onComplete(lastModel);
+            listener.onError("AI provider stream ended before completion.");
         } catch (Exception e) {
             LOG.log(Level.WARNING, "LM HTTP stream failed: " + url, e);
-            throw new LmException("LM HTTP stream failed: " + e.getMessage(), e);
+            throw new LmException(hasTimeoutCause(e)
+                    ? "AI provider stream timed out. Please try again."
+                    : "LM HTTP stream failed: " + e.getMessage(), e);
         }
+    }
+
+    private static boolean hasTimeoutCause(Throwable error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof HttpTimeoutException) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void requireCredentials() throws LmException {
+        if (config.getApiKey().isEmpty()) {
+            throw new LmException("AI API key is missing. Set ARK_API_KEY or LM_API_KEY.");
+        }
+        if (config.getBaseUrl().isEmpty()) {
+            throw new LmException("AI API base URL is missing. Set LM_BASE_URL.");
+        }
+    }
+
+    private String resolveModel(LmRequest request) throws LmException {
+        String model = Strings.firstNonBlank(request.getModel(), config.getModel());
+        if (model.isEmpty()) {
+            throw new LmException("AI model is missing. Set ARK_MODEL or LM_MODEL to an enabled model or endpoint ID.");
+        }
+        return model;
+    }
+
+    private String providerName() {
+        return config.getProviderType().name().toLowerCase(Locale.ROOT);
     }
 
     private static String joinBaseAndPath(String baseUrl, String path) {
@@ -227,79 +295,62 @@ public final class HttpLmClient implements LmClient {
         return sb.toString();
     }
 
-    private static String extractModelText(String json) {
-        if (json == null) {
-            return null;
+    private LmResponse parseCompletion(String raw, String requestedModel) {
+        try {
+            JsonObject response = JsonParser.parseString(raw).getAsJsonObject();
+            String error = errorMessage(response);
+            String model = Strings.firstNonBlank(stringValue(response, "model"), requestedModel);
+            if (error != null) {
+                return new LmResponse("", providerName(), model, false, raw, error);
+            }
+            JsonObject message = firstChoiceObject(response, "message");
+            String content = stringValue(message, "content");
+            if (content == null || content.isEmpty()) {
+                return new LmResponse("", providerName(), model, false, raw,
+                        "AI provider returned no assistant text.");
+            }
+            return new LmResponse(content, providerName(), model, true, raw, null);
+        } catch (RuntimeException e) {
+            return new LmResponse("", providerName(), requestedModel, false, raw,
+                    "Invalid JSON from AI provider.");
         }
-        int choices = json.indexOf("\"choices\"");
-        int from = choices >= 0 ? choices : 0;
-        String content = extractJsonStringValue(json, "content", from);
-        if (content != null && !content.isEmpty()) {
-            return content;
-        }
-        return extractJsonStringValue(json, "text", from);
     }
 
-    /**
-     * Very small JSON string extractor for predictable provider payloads (coursework prototype).
-     * TODO: replace with robust JSON parsing if responses become nested or reordered.
-     */
-    private static String extractJsonStringValue(String json, String field, int searchFrom) {
-        if (json == null || field == null || searchFrom < 0) {
+    private static JsonObject firstChoiceObject(JsonObject response, String field) {
+        if (response == null) {
             return null;
         }
-        String needle = "\"" + field + "\"";
-        int idx = json.indexOf(needle, searchFrom);
-        if (idx < 0) {
+        JsonElement choicesElement = response.get("choices");
+        if (choicesElement == null || !choicesElement.isJsonArray()) {
             return null;
         }
-        int colon = json.indexOf(':', idx + needle.length());
-        if (colon < 0) {
+        JsonArray choices = choicesElement.getAsJsonArray();
+        if (choices.isEmpty() || !choices.get(0).isJsonObject()) {
             return null;
         }
-        int i = colon + 1;
-        while (i < json.length() && Character.isWhitespace(json.charAt(i))) {
-            i++;
-        }
-        if (i >= json.length() || json.charAt(i) != '"') {
-            return null;
-        }
-        return readJsonStringContents(json, i);
+        JsonElement value = choices.get(0).getAsJsonObject().get(field);
+        return value != null && value.isJsonObject() ? value.getAsJsonObject() : null;
     }
 
-    private static String readJsonStringContents(String json, int openQuoteIndex) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = openQuoteIndex + 1; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (c == '"') {
-                break;
-            }
-            if (c == '\\' && i + 1 < json.length()) {
-                char n = json.charAt(++i);
-                switch (n) {
-                    case 'n':
-                        sb.append('\n');
-                        break;
-                    case 'r':
-                        sb.append('\r');
-                        break;
-                    case 't':
-                        sb.append('\t');
-                        break;
-                    case '"':
-                        sb.append('"');
-                        break;
-                    case '\\':
-                        sb.append('\\');
-                        break;
-                    default:
-                        sb.append(n);
-                }
-                continue;
-            }
-            sb.append(c);
+    private static String errorMessage(JsonObject response) {
+        if (response == null || !response.has("error")) {
+            return null;
         }
-        return sb.toString();
+        JsonElement error = response.get("error");
+        if (error != null && error.isJsonObject()) {
+            return Strings.firstNonBlank(stringValue(error.getAsJsonObject(), "message"),
+                    "AI provider returned an error.");
+        }
+        return error != null && error.isJsonPrimitive() ? error.getAsString()
+                : "AI provider returned an error.";
+    }
+
+    private static String stringValue(JsonObject object, String field) {
+        if (object == null) {
+            return null;
+        }
+        JsonElement value = object.get(field);
+        return value != null && value.isJsonPrimitive() ? value.getAsString() : null;
     }
 
 }

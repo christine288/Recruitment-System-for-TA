@@ -15,11 +15,22 @@ class SkillMatchServiceTest {
 
     @Test
     void matchApplicantSkills_invokesMockClient() throws LmException {
-        ServletContext ctx = LmTestSupport.servletContextWithLmProperties(null);
+        ServletContext ctx = LmTestSupport.servletContextWithLmProperties("LM_PROVIDER=mock\n");
         LmConfig cfg = LmConfig.load(ctx);
         SkillMatchService svc = new SkillMatchService(new MockLmClient(), cfg);
         LmResponse r = svc.matchApplicantSkills("Python", "Python, Teaching");
         assertTrue(r.isSuccess());
         assertTrue(r.getText().contains("Match score"));
     }
+<<<<<<< Updated upstream
+=======
+
+    @Test
+    void matchApplicantSkills_emptyInputsStillSucceed() throws LmException {
+        SkillMatchService svc = new SkillMatchService(new MockLmClient(), LmConfig.load(
+                LmTestSupport.servletContextWithLmProperties("LM_PROVIDER=mock\n")));
+        LmResponse r = svc.matchApplicantSkills("", "");
+        assertTrue(r.isSuccess());
+    }
+>>>>>>> Stashed changes
 }

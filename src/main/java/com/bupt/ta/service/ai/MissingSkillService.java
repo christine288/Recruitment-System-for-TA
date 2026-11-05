@@ -34,7 +34,7 @@ public final class MissingSkillService {
                         + AiLmDefaults.nz(requiredJobSkills))
                 .temperature(0.1d)
                 .maxTokens(512)
-                .model(AiLmDefaults.modelOrFallback(config))
+                .model(AiLmDefaults.configuredModel(config))
                 .build();
     }
 }

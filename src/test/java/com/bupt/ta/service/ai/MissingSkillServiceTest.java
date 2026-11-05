@@ -15,7 +15,7 @@ class MissingSkillServiceTest {
 
     @Test
     void identifyMissingSkills_invokesMockClient() throws LmException {
-        ServletContext ctx = LmTestSupport.servletContextWithLmProperties(null);
+        ServletContext ctx = LmTestSupport.servletContextWithLmProperties("LM_PROVIDER=mock\n");
         LmConfig cfg = LmConfig.load(ctx);
         MissingSkillService svc = new MissingSkillService(new MockLmClient(), cfg);
         LmResponse r = svc.identifyMissingSkills("A", "A, B, C");
