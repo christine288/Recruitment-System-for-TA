@@ -5,6 +5,7 @@
   String csrfToken = com.bupt.ta.security.CsrfFilter.csrfToken(request);
   Boolean lmEnabled = (Boolean) request.getAttribute("lmEnabled");
   String lmProvider = (String) request.getAttribute("lmProvider");
+  String lmModel = (String) request.getAttribute("lmModel");
   AiFeatureOutput result = (AiFeatureOutput) request.getAttribute("result");
   String lastAction = (String) request.getAttribute("lastAction");
   if (lmEnabled == null) lmEnabled = Boolean.TRUE;
@@ -84,7 +85,8 @@
       <% } else { %>
       <strong>Configured Provider</strong> — AI requests use your configured HTTP provider. Ensure its URL, API key, and model are set correctly.
       <% } %>
-      Status: LM_ENABLED=<%= esc(String.valueOf(lmEnabled)) %>, LM_PROVIDER=<code><%= esc(lmProvider) %></code>.
+      Configuration only: LM_ENABLED=<%= esc(String.valueOf(lmEnabled)) %>, LM_PROVIDER=<code><%= esc(lmProvider) %></code>, model=<code><%= esc(lmModel) %></code>.
+      A successful request is needed to verify that this account can use the model.
     </div>
 
     <% if (result != null) { %>

@@ -8,6 +8,7 @@ import com.bupt.ta.util.HttpJsonClient;
 import com.bupt.ta.util.Strings;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.http.HttpTimeoutException;
@@ -15,6 +16,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -45,6 +48,8 @@ import java.util.logging.Logger;
  * @see LmConfig
  */
 public final class HttpLmClient implements LmClient {
+    private static final Pattern ARK_REQUEST_ID = Pattern.compile("(?i)\\bRequest\\s*id\\s*:\\s*([A-Za-z0-9_-]+)");
+    private static final long MODEL_NOT_OPEN_RETRY_DELAY_MS = 500L;
     private static final Logger LOG = Logger.getLogger(HttpLmClient.class.getName());
     private final LmConfig config;
 
@@ -86,11 +91,14 @@ public final class HttpLmClient implements LmClient {
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put("Authorization", "Bearer " + config.getApiKey());
         try {
-            String raw = HttpJsonClient.postJson(url, headers, body, config.getTimeoutMs());
+            String raw = retryArkModelNotOpenOnce(
+                    () -> HttpJsonClient.postJson(url, headers, body, config.getTimeoutMs()), model);
             return parseCompletion(raw, model);
         } catch (Exception e) {
             LOG.log(Level.WARNING, "LM HTTP request failed: " + url, e);
-            throw new LmException("LM HTTP request failed: " + e.getMessage(), e);
+            String modelNotOpen = arkModelNotOpenMessage(e, model);
+            throw new LmException(modelNotOpen != null
+                    ? modelNotOpen : "LM HTTP request failed: " + e.getMessage(), e);
         }
     }
 
@@ -120,7 +128,8 @@ public final class HttpLmClient implements LmClient {
         }
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put("Authorization", "Bearer " + config.getApiKey());
-        try (InputStream rawIn = HttpJsonClient.postJsonStream(url, headers, body, config.getTimeoutMs());
+        try (InputStream rawIn = retryArkModelNotOpenOnce(
+                     () -> HttpJsonClient.postJsonStream(url, headers, body, config.getTimeoutMs()), model);
              BufferedReader br = new BufferedReader(new InputStreamReader(rawIn, StandardCharsets.UTF_8))) {
             String line;
             String lastModel = model;
@@ -161,10 +170,71 @@ public final class HttpLmClient implements LmClient {
             listener.onError("AI provider stream ended before completion.");
         } catch (Exception e) {
             LOG.log(Level.WARNING, "LM HTTP stream failed: " + url, e);
-            throw new LmException(hasTimeoutCause(e)
-                    ? "AI provider stream timed out. Please try again."
+            String modelNotOpen = arkModelNotOpenMessage(e, model);
+            throw new LmException(modelNotOpen != null ? modelNotOpen
+                    : hasTimeoutCause(e) ? "AI provider stream timed out. Please try again."
                     : "LM HTTP stream failed: " + e.getMessage(), e);
         }
+    }
+
+    @FunctionalInterface
+    private interface HttpOperation<T> {
+        T execute() throws IOException, InterruptedException;
+    }
+
+    private <T> T retryArkModelNotOpenOnce(HttpOperation<T> operation, String model)
+            throws IOException, InterruptedException {
+        try {
+            return operation.execute();
+        } catch (IOException firstError) {
+            String modelNotOpen = arkModelNotOpenMessage(firstError, model);
+            if (modelNotOpen == null) {
+                throw firstError;
+            }
+            LOG.warning("Ark returned ModelNotOpen; retrying once: " + modelNotOpen);
+            try {
+                Thread.sleep(MODEL_NOT_OPEN_RETRY_DELAY_MS);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw interrupted;
+            }
+            return operation.execute();
+        }
+    }
+
+    private String arkModelNotOpenMessage(Exception error, String model) {
+        if (config.getProviderType() != LmProviderType.DOUBAO || !(error instanceof IOException)) {
+            return null;
+        }
+        String detail = error.getMessage();
+        String prefix = "HTTP 404: ";
+        if (detail == null || !detail.startsWith(prefix)) {
+            return null;
+        }
+        String requestId = null;
+        try {
+            JsonObject response = JsonParser.parseString(detail.substring(prefix.length())).getAsJsonObject();
+            JsonObject providerError = response.getAsJsonObject("error");
+            if (providerError == null || !"ModelNotOpen".equals(stringValue(providerError, "code"))) {
+                return null;
+            }
+            requestId = stringValue(response, "request_id");
+            if (requestId == null || requestId.isEmpty()) {
+                String providerMessage = stringValue(providerError, "message");
+                if (providerMessage != null) {
+                    Matcher match = ARK_REQUEST_ID.matcher(providerMessage);
+                    if (match.find()) {
+                        requestId = match.group(1);
+                    }
+                }
+            }
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+        return "Ark model '" + model + "' is not activated for this account. "
+                + "Activate it in the Volcengine Ark Console, or set ARK_MODEL (or LM_MODEL) "
+                + "to an activated model or endpoint ID and restart the server."
+                + (requestId != null && !requestId.isEmpty() ? " Ark request ID: " + requestId + "." : "");
     }
 
     private static boolean hasTimeoutCause(Throwable error) {

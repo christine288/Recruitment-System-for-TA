@@ -91,5 +91,6 @@ public class AiDemoServlet extends BaseServlet {
     private void attachCommonAttrs(HttpServletRequest req) {
         req.setAttribute("lmEnabled", lmConfig.isEnabled());
         req.setAttribute("lmProvider", lmConfig.getProviderType().name().toLowerCase());
+        req.setAttribute("lmModel", lmConfig.getModel());
     }
 }

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Verifies Doubao configuration failures and its OpenAI-compatible HTTP wire format. */
 class HttpLmClientTest {
+    private static final String MODEL_NOT_OPEN_RESPONSE = "{\"error\":{\"code\":\"ModelNotOpen\","
+            + "\"message\":\"Your account has not activated the model. Request id: test-request-123456\","
+            + "\"type\":\"Not Found\"}}";
 
     @Test
     void generate_withoutApiKey_failsBeforeNetwork() {
@@ -110,6 +114,128 @@ class HttpLmClientTest {
         }
     }
 
+    @Test
+    void generate_modelNotOpenExplainsHowToFixConfiguration() throws Exception {
+        AtomicInteger attempts = new AtomicInteger();
+        HttpServer server = startServer(exchange -> {
+            attempts.incrementAndGet();
+            respond(exchange, 404, "application/json", MODEL_NOT_OPEN_RESPONSE);
+        });
+        try {
+            LmException error = assertThrows(LmException.class,
+                    () -> new HttpLmClient(localConfig(server.getAddress().getPort())).generate(request()));
+
+            assertTrue(error.getMessage().contains("ep-test-endpoint"));
+            assertTrue(error.getMessage().contains("Volcengine Ark Console"));
+            assertTrue(error.getMessage().contains("ARK_MODEL"));
+            assertTrue(error.getMessage().contains("Ark request ID: test-request-123456"));
+            assertFalse(error.getMessage().contains("{\"error\""));
+            assertEquals(2, attempts.get());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void stream_modelNotOpenExplainsHowToFixConfiguration() throws Exception {
+        AtomicInteger attempts = new AtomicInteger();
+        HttpServer server = startServer(exchange -> {
+            attempts.incrementAndGet();
+            respond(exchange, 404, "application/json", MODEL_NOT_OPEN_RESPONSE);
+        });
+        try {
+            LmException error = assertThrows(LmException.class,
+                    () -> new HttpLmClient(localConfig(server.getAddress().getPort()))
+                            .stream(request(), new LmStreamListener() {
+                                @Override public void onDelta(String text) {}
+                                @Override public void onComplete(String model) {}
+                                @Override public void onError(String message) {}
+                            }));
+
+            assertTrue(error.getMessage().contains("ep-test-endpoint"));
+            assertTrue(error.getMessage().contains("Volcengine Ark Console"));
+            assertTrue(error.getMessage().contains("ARK_MODEL"));
+            assertTrue(error.getMessage().contains("Ark request ID: test-request-123456"));
+            assertFalse(error.getMessage().contains("{\"error\""));
+            assertEquals(2, attempts.get());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void generate_transientModelNotOpenRetriesAndSucceeds() throws Exception {
+        AtomicInteger attempts = new AtomicInteger();
+        HttpServer server = startServer(exchange -> {
+            if (attempts.incrementAndGet() == 1) {
+                respond(exchange, 404, "application/json", MODEL_NOT_OPEN_RESPONSE);
+            } else {
+                respond(exchange, "application/json",
+                        "{\"model\":\"ep-test-endpoint\",\"choices\":[{\"message\":{\"content\":\"OK\"}}]}");
+            }
+        });
+        try {
+            LmResponse response = new HttpLmClient(localConfig(server.getAddress().getPort())).generate(request());
+
+            assertTrue(response.isSuccess());
+            assertEquals("OK", response.getText());
+            assertEquals(2, attempts.get());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void stream_transientModelNotOpenRetriesAndCompletes() throws Exception {
+        AtomicInteger attempts = new AtomicInteger();
+        HttpServer server = startServer(exchange -> {
+            if (attempts.incrementAndGet() == 1) {
+                respond(exchange, 404, "application/json", MODEL_NOT_OPEN_RESPONSE);
+            } else {
+                respond(exchange, "text/event-stream",
+                        "data: {\"choices\":[{\"delta\":{\"content\":\"OK\"}}]}\n\n"
+                                + "data: [DONE]\n\n");
+            }
+        });
+        try {
+            StringBuilder text = new StringBuilder();
+            AtomicReference<String> error = new AtomicReference<>();
+            AtomicReference<String> completedModel = new AtomicReference<>();
+            new HttpLmClient(localConfig(server.getAddress().getPort())).stream(request(), new LmStreamListener() {
+                @Override public void onDelta(String delta) { text.append(delta); }
+                @Override public void onComplete(String model) { completedModel.set(model); }
+                @Override public void onError(String message) { error.set(message); }
+            });
+
+            assertEquals("OK", text.toString());
+            assertNull(error.get());
+            assertEquals("ep-test-endpoint", completedModel.get());
+            assertEquals(2, attempts.get());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void generate_otherHttpErrorsKeepTheirOriginalMessage() throws Exception {
+        AtomicInteger attempts = new AtomicInteger();
+        HttpServer server = startServer(exchange -> {
+            attempts.incrementAndGet();
+            respond(exchange, 404, "application/json",
+                    "{\"error\":{\"code\":\"OtherError\",\"message\":\"Other failure\"}}");
+        });
+        try {
+            LmException error = assertThrows(LmException.class,
+                    () -> new HttpLmClient(localConfig(server.getAddress().getPort())).generate(request()));
+
+            assertTrue(error.getMessage().contains("LM HTTP request failed: HTTP 404:"));
+            assertTrue(error.getMessage().contains("OtherError"));
+            assertEquals(1, attempts.get());
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private static LmRequest request() {
         return LmRequest.builder()
                 .featureName(AiFeatureNames.SKILL_MATCH)
@@ -134,9 +260,13 @@ class HttpLmClientTest {
     }
 
     private static void respond(HttpExchange exchange, String contentType, String body) throws IOException {
+        respond(exchange, 200, contentType, body);
+    }
+
+    private static void respond(HttpExchange exchange, int status, String contentType, String body) throws IOException {
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", contentType + "; charset=utf-8");
-        exchange.sendResponseHeaders(200, bytes.length);
+        exchange.sendResponseHeaders(status, bytes.length);
         try (OutputStream output = exchange.getResponseBody()) {
             output.write(bytes);
         }

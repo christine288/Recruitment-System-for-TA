@@ -376,6 +376,7 @@
                   <div class="mo-ai-advice-body">
                     <div class="mo-ai-advice-loading">Analyzing workload…</div>
                     <div class="mo-ai-advice-md" style="display:none;"></div>
+                    <button type="button" class="btn btn-outline mo-ai-advice-retry" style="display:none; margin-top:.75rem;">Retry</button>
                   </div>
                 </div>
                 <% } else { %>
@@ -474,6 +475,7 @@
                     <div class="mo-ai-advice-body">
                       <div class="mo-ai-advice-loading">Reviewing decision…</div>
                       <div class="mo-ai-advice-md" style="display:none;"></div>
+                      <button type="button" class="btn btn-outline mo-ai-advice-retry" style="display:none; margin-top:.75rem;">Retry</button>
                     </div>
                   </div>
                   <% } else { %>
@@ -513,22 +515,47 @@
   var active = 0;
 
   document.querySelectorAll('.mo-ai-advice[data-app-id]').forEach(function (panel) {
-    queue.push({
+    var item = {
       appId: panel.getAttribute('data-app-id'),
       feature: panel.getAttribute('data-feature') || 'moWorkloadAdvice',
-      panelId: panel.id
-    });
+      panelId: panel.id,
+      queued: true,
+      running: false
+    };
+    queue.push(item);
+    var retryBtn = panel.querySelector('.mo-ai-advice-retry');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', function () {
+        if (item.queued || item.running) return;
+        item.queued = true;
+        retryBtn.style.display = 'none';
+        var loadingEl = panel.querySelector('.mo-ai-advice-loading');
+        if (loadingEl) {
+          loadingEl.className = 'mo-ai-advice-loading';
+          loadingEl.textContent = 'Waiting to retry…';
+          loadingEl.style.display = 'flex';
+        }
+        queue.push(item);
+        pumpQueue();
+      });
+    }
   });
 
   function pumpQueue() {
     while (active < maxConcurrent && queue.length > 0) {
-      var item = queue.shift();
-      active++;
-      startAdviceStream(item, function () {
-        active--;
-        pumpQueue();
-      });
+      startQueuedItem(queue.shift());
     }
+  }
+
+  function startQueuedItem(item) {
+    item.queued = false;
+    item.running = true;
+    active++;
+    startAdviceStream(item, function () {
+      item.running = false;
+      active--;
+      pumpQueue();
+    });
   }
 
   function applyRecommendationBadge(panel, text, feature) {
@@ -569,9 +596,31 @@
     }
     var loadingEl = panel.querySelector('.mo-ai-advice-loading');
     var mdEl = panel.querySelector('.mo-ai-advice-md');
+    var retryBtn = panel.querySelector('.mo-ai-advice-retry');
+    var badgeSlot = panel.querySelector('.rec-badge-slot');
     var text = '';
+    var finished = false;
     var url = ctx + '/api/ai/stream?feature=' + encodeURIComponent(item.feature)
         + '&applicationId=' + encodeURIComponent(item.appId);
+
+    function finish() {
+      if (finished) return;
+      finished = true;
+      done();
+    }
+
+    if (mdEl) {
+      mdEl.textContent = '';
+      mdEl.style.display = 'none';
+    }
+    if (badgeSlot) badgeSlot.textContent = '';
+    if (retryBtn) retryBtn.style.display = 'none';
+    if (loadingEl) {
+      loadingEl.className = 'mo-ai-advice-loading';
+      loadingEl.textContent = item.feature === 'moDecisionReview'
+          ? 'Reviewing decision…' : 'Analyzing workload…';
+      loadingEl.style.display = 'flex';
+    }
 
     TaAiStream.consume(url, {
       onDelta: function (delta) {
@@ -584,21 +633,28 @@
       },
       onDone: function () {
         if (!text && loadingEl) {
+          loadingEl.className = 'mo-ai-advice-error';
           loadingEl.textContent = item.feature === 'moDecisionReview'
               ? 'No insight returned.' : 'No advice returned.';
-          loadingEl.style.display = 'flex';
+          loadingEl.style.display = 'block';
+          if (retryBtn) retryBtn.style.display = 'inline-flex';
         } else {
           applyRecommendationBadge(panel, text, item.feature);
         }
-        done();
+        finish();
       },
       onError: function (err) {
+        if (mdEl) {
+          mdEl.textContent = '';
+          mdEl.style.display = 'none';
+        }
         if (loadingEl) {
           loadingEl.className = 'mo-ai-advice-error';
-          loadingEl.textContent = err || 'AI request failed.';
+          loadingEl.textContent = (text ? 'Analysis incomplete. ' : '') + (err || 'AI request failed.');
           loadingEl.style.display = 'block';
         }
-        done();
+        if (retryBtn) retryBtn.style.display = 'inline-flex';
+        finish();
       }
     });
   }
