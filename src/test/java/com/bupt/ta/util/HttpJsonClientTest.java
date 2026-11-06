@@ -5,6 +5,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -47,6 +49,34 @@ class HttpJsonClientTest {
         startServer(200, "");
         String url = "http://127.0.0.1:" + server.getAddress().getPort() + "/api";
         assertEquals("", HttpJsonClient.postJson(url, null, null, 5000));
+    }
+
+    @Test
+    void postJsonStream_doesNotCloseAnActiveStreamAtTheConnectTimeout() throws Exception {
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/api", exchange -> {
+            exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
+            exchange.sendResponseHeaders(200, 0);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write("data: first\n\n".getBytes(StandardCharsets.UTF_8));
+                output.flush();
+                try {
+                    Thread.sleep(1_400);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException(interrupted);
+                }
+                output.write("data: [DONE]\n\n".getBytes(StandardCharsets.UTF_8));
+            }
+        });
+        server.start();
+
+        String url = "http://127.0.0.1:" + server.getAddress().getPort() + "/api";
+        try (InputStream stream = HttpJsonClient.postJsonStream(url, null, "{}", 1_000)) {
+            String body = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            assertTrue(body.contains("data: first"));
+            assertTrue(body.contains("data: [DONE]"));
+        }
     }
 
     private void startServer(int status, String responseBody) throws IOException {

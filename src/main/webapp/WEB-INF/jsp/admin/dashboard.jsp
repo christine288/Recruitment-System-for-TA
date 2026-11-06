@@ -484,9 +484,14 @@
         }
       },
       onError: function (err) {
+        if (mdEl) {
+          mdEl.style.display = 'none';
+          mdEl.textContent = '';
+        }
         if (loadingEl) {
           loadingEl.className = 'analytics-ai__error';
-          loadingEl.textContent = err || 'AI analysis failed.';
+          loadingEl.textContent = (text ? 'Analysis incomplete. ' : '') + (err || 'AI analysis failed.');
+          loadingEl.style.display = 'block';
         }
       }
     });

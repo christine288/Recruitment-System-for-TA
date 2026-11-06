@@ -1,6 +1,7 @@
 package com.bupt.ta.ai;
 
 import com.bupt.ta.util.AppConfig;
+import com.bupt.ta.util.Strings;
 
 import javax.servlet.ServletContext;
 import java.util.Properties;
@@ -18,26 +19,26 @@ import java.util.Properties;
  * <ul>
  *   <li>{@code LM_ENABLED} — default {@code true}; when {@code false}, factory returns
  *       {@link MockLmClient} with {@code forceDisabled} and AI features report as disabled</li>
- *   <li>{@code LM_PROVIDER} — default {@code mock}; maps to {@link LmProviderType}
- *       ({@code mock}, {@code openai}, {@code custom}); unknown values fall back to
- *       {@link LmProviderType#MOCK}</li>
- *   <li>{@code LM_API_KEY} — default empty; required with {@code LM_BASE_URL} for HTTP providers</li>
- *   <li>{@code LM_BASE_URL} — default empty; provider API root (no trailing path required)</li>
- *   <li>{@code LM_MODEL} — default empty; global default model; per-request override via
- *       {@link LmRequest#getModel()}; HTTP client falls back to {@link LmModelDefaults#CHAT_FALLBACK}</li>
- *   <li>{@code LM_TIMEOUT_MS} — default {@code 30000}; HTTP read/connect timeout in milliseconds</li>
+ *   <li>{@code LM_PROVIDER} — default {@code doubao}; unknown values fail fast</li>
+ *   <li>{@code LM_API_KEY} or {@code ARK_API_KEY} — required for HTTP providers</li>
+ *   <li>{@code LM_BASE_URL} — defaults to the Ark API root for Doubao</li>
+ *   <li>{@code LM_MODEL} or {@code ARK_MODEL} — activated model or endpoint ID;
+ *       required for HTTP providers unless a request overrides it</li>
+ *   <li>{@code LM_TIMEOUT_MS} — default {@code 30000}; HTTP connect and non-streaming
+ *       request timeout in milliseconds. Streaming requests allow at least 180,000 ms.</li>
  *   <li>{@code LM_HTTP_CHAT_PATH} — default {@code /chat/completions}; appended to {@link #getBaseUrl()}
  *       for OpenAI-compatible chat endpoints</li>
  * </ul>
  *
- * <p><strong>Fallback behaviour:</strong> Safe defaults require no outbound network
- * ({@link LmProviderType#MOCK}). Boolean and integer parsing uses documented defaults
- * when values are missing or malformed.
+ * <p>Missing credentials or model IDs produce a visible error instead of mock output.
+ * Boolean and integer parsing uses documented defaults when values are malformed.
  *
  * @see LmClientFactory#create(LmConfig)
  * @see HttpLmClient
  */
 public final class LmConfig {
+    public static final String DOUBAO_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
+
     private final boolean enabled;
     private final LmProviderType providerType;
     private final String apiKey;
@@ -67,7 +68,7 @@ public final class LmConfig {
      * and {@code lm.provider}).
      *
      * @param ctx servlet context used to locate {@code WEB-INF/lm.properties}; must not be {@code null}
-     * @return a fully constructed {@link LmConfig} with safe defaults for missing or invalid values
+     * @return a fully constructed {@link LmConfig} with defaults for missing optional values
      */
     public static LmConfig load(ServletContext ctx) {
         Properties p = AppConfig.loadWebInfProperties(ctx, "lm.properties");
@@ -84,29 +85,25 @@ public final class LmConfig {
                 new String[]{"LM_PROVIDER", "lm.provider"},
                 p,
                 "LM_PROVIDER",
-                "mock");
+                "doubao");
         LmProviderType type = LmProviderType.fromString(providerRaw);
 
-        String apiKey = AppConfig.resolve(
-                "LM_API_KEY",
-                new String[]{"LM_API_KEY", "lm.apiKey"},
-                p,
-                "LM_API_KEY",
-                "");
+        String apiKey = type == LmProviderType.DOUBAO
+                ? resolveArkAlias(p, "LM_API_KEY", "lm.apiKey", "ARK_API_KEY", "ark.apiKey")
+                : AppConfig.resolve("LM_API_KEY", new String[]{"LM_API_KEY", "lm.apiKey"},
+                        p, "LM_API_KEY", "");
 
         String baseUrl = AppConfig.resolve(
                 "LM_BASE_URL",
                 new String[]{"LM_BASE_URL", "lm.baseUrl"},
                 p,
                 "LM_BASE_URL",
-                "");
+                type == LmProviderType.DOUBAO ? DOUBAO_BASE_URL : "");
 
-        String model = AppConfig.resolve(
-                "LM_MODEL",
-                new String[]{"LM_MODEL", "lm.model"},
-                p,
-                "LM_MODEL",
-                "");
+        String model = type == LmProviderType.DOUBAO
+                ? resolveArkAlias(p, "LM_MODEL", "lm.model", "ARK_MODEL", "ark.model")
+                : AppConfig.resolve("LM_MODEL", new String[]{"LM_MODEL", "lm.model"},
+                        p, "LM_MODEL", "");
 
         String timeoutStr = AppConfig.resolve(
                 "LM_TIMEOUT_MS",
@@ -124,6 +121,16 @@ public final class LmConfig {
                 "/chat/completions");
 
         return new LmConfig(enabled, type, apiKey, baseUrl, model, timeoutMs, httpPath);
+    }
+
+    private static String resolveArkAlias(Properties p, String lmKey, String lmDotted,
+                                          String arkKey, String arkDotted) {
+        return Strings.firstNonBlank(
+                System.getenv(lmKey), System.getenv(arkKey),
+                System.getProperty(lmKey), System.getProperty(lmDotted),
+                System.getProperty(arkKey), System.getProperty(arkDotted),
+                p.getProperty(lmKey), p.getProperty(lmDotted),
+                p.getProperty(arkKey), p.getProperty(arkDotted));
     }
 
     private static boolean parseBoolean(String s, boolean defaultVal) {
@@ -185,8 +192,7 @@ public final class LmConfig {
     /**
      * Returns the default model name ({@code LM_MODEL}) for requests that do not specify one.
      *
-     * <p>When empty, {@link HttpLmClient} falls back to {@link LmRequest#getModel()} then
-     * {@link LmModelDefaults#CHAT_FALLBACK}.
+     * <p>When empty, an HTTP request must specify its own model or fails visibly.
      *
      * @return trimmed model identifier, or empty string when not configured
      */
@@ -195,7 +201,8 @@ public final class LmConfig {
     }
 
     /**
-     * Returns the HTTP request timeout in milliseconds ({@code LM_TIMEOUT_MS}).
+     * Returns the connect and non-streaming request timeout in milliseconds
+     * ({@code LM_TIMEOUT_MS}). Streaming requests have a 180-second minimum.
      *
      * @return timeout value; defaults to {@code 30000} when unset or unparsable
      */
@@ -219,10 +226,8 @@ public final class LmConfig {
      * Indicates whether an HTTP provider has the minimum credentials to attempt a real call.
      *
      * <p>Requires both non-empty {@link #getApiKey()} and {@link #getBaseUrl()}. A {@code true}
-     * result does not guarantee success at runtime (network errors still occur). When {@code false},
-     * {@link LmClientFactory} falls back to {@link MockLmClient} for {@link LmProviderType#OPENAI}
-     * and {@link LmProviderType#CUSTOM}, and {@link HttpLmClient} throws {@link LmException} if
-     * invoked directly.
+     * result does not guarantee success at runtime (the model may be missing or a network error
+     * may occur). {@link HttpLmClient} reports missing settings when invoked.
      *
      * @return {@code true} when both API key and base URL are configured
      */

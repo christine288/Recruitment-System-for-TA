@@ -70,7 +70,7 @@ public final class AdminAnalyticsService {
                 .userPrompt(AdminMetricsBuilder.buildAnalyticsPrompt(metrics))
                 .temperature(0.3d)
                 .maxTokens(650)
-                .model(AiLmDefaults.modelOrFallback(config))
+                .model(AiLmDefaults.configuredModel(config))
                 .build();
     }
 }

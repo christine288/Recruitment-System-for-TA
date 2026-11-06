@@ -1,14 +1,24 @@
-# Copy this file to lm.properties in the same folder.
+# Copy this file to lm.properties in the same folder for local Tomcat runs.
 # Priority: environment variables > JVM properties > this file > defaults.
+# Never commit lm.properties with a real API key.
 
 LM_ENABLED=true
-LM_PROVIDER=mock
+LM_PROVIDER=doubao
+# Set your own Volcengine Ark API key and an available Doubao Model ID or Endpoint ID.
+# The application reports a configuration error until both values are set.
+ARK_API_KEY=
+ARK_MODEL=
+
+# Optional aliases for the two values above: LM_API_KEY and LM_MODEL.
+# LM_API_KEY=
+# LM_MODEL=
+
+# Ark's Beijing Chat Completions endpoint (change only if your region differs).
+LM_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+LM_HTTP_CHAT_PATH=/chat/completions
+# Connect and non-streaming timeout; streaming requests allow at least 180 seconds.
+LM_TIMEOUT_MS=30000
+
+# For deterministic offline tests only, switch explicitly to LM_PROVIDER=mock.
 # LM_PROVIDER=openai
 # LM_PROVIDER=custom
-
-# Required only for openai/custom providers:
-LM_BASE_URL=
-LM_API_KEY=
-LM_MODEL=gpt-4o-mini
-LM_TIMEOUT_MS=30000
-LM_HTTP_CHAT_PATH=/chat/completions

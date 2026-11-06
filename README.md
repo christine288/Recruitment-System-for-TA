@@ -11,7 +11,7 @@ Web platform for Teaching Assistant recruitment at BUPT International School.
 | **Context path** | `/ta-recruitment` |
 | **Storage** | JSON files under `WEB-INF/data/` — no database |
 
-**Try it locally:** `mvn tomcat7:run-war` → [http://localhost:18080/ta-recruitment/login](http://localhost:18080/ta-recruitment/login)  
+**Try it locally with Doubao:** `python3 tools/run-local.py` → [http://localhost:18080/ta-recruitment/login](http://localhost:18080/ta-recruitment/login)
 **User guide:** [docs/USER_MANUAL.md](docs/USER_MANUAL.md)
 
 ---
@@ -38,7 +38,7 @@ The team follows **Agile** development (feature branches, pull requests, product
 | Persistence | Plain JSON files + CV files on disk (`FileStore` in `com.bupt.ta.service`) |
 | Security | BCrypt (`jbcrypt`), CSRF filter on POST, role-based access |
 | Email | JavaMail — optional SMTP (MailHog in Docker Compose) |
-| AI | Pluggable LM layer — **mock** default, OpenAI-compatible HTTP scaffold |
+| AI | Volcengine Ark Chat Completions with Doubao by default; explicit offline mock for tests |
 | Build / test | Maven 3.9+, JUnit 5, Mockito |
 | CI | GitHub Actions — `mvn clean verify` |
 
@@ -54,7 +54,8 @@ Recruitment-System-for-TA/
 │   ├── javadoc/                    # Generated API docs (mvn verify)
 │   └── ProductBacklog_group51.xlsx
 ├── tools/
-│   └── capture_manual_screenshots.py
+│   ├── capture_manual_screenshots.py
+│   └── run-local.py                # Load root .env for local Doubao runs
 ├── src/main/java/com/bupt/ta/
 │   ├── ai/                         # LmClient, MockLmClient, HttpLmClient, LmConfig
 │   ├── model/                      # User, Job, Application, ApplicantProfile, …
@@ -103,7 +104,7 @@ All commands run from the **repository root**.
 ### Build WAR
 
 ```powershell
-mvn clean package
+mvn package
 ```
 
 Output: `target/ta-recruitment.war`
@@ -122,11 +123,17 @@ mvn clean verify
 
 ### Run locally (embedded Tomcat, port 18080)
 
-```powershell
-mvn tomcat7:run-war
+Create a Git-ignored `.env` file in the repository root with `ARK_API_KEY` and
+`ARK_MODEL`, then run:
+
+```bash
+python3 tools/run-local.py
 ```
 
-Open [http://localhost:18080/ta-recruitment/login](http://localhost:18080/ta-recruitment/login). Stop with `Ctrl+C`.
+The helper loads those settings and starts `tomcat7:run-war`. A plain
+`mvn tomcat7:run-war` does not load `.env`. Open
+[http://localhost:18080/ta-recruitment/login](http://localhost:18080/ta-recruitment/login).
+Stop with `Ctrl+C`.
 
 ### Deploy to external Tomcat 9
 
@@ -182,7 +189,7 @@ The login page lists demo accounts in a collapsible panel.
 
 1. Register or log in → 2. Complete profile (CV optional) → 3. Browse/filter/favorite jobs on `/job` → 4. Apply from job detail → 5. Track or withdraw applications on `/applications`
 
-AI hints (mock by default): job recommendations, skill match, missing skills.
+AI hints (Doubao when configured): job recommendations, skill match, missing skills.
 
 ### Module organiser
 
@@ -264,7 +271,7 @@ All persistent state lives under `WEB-INF/data/`:
 | `password-reset-tokens.json` | Password reset tokens |
 | `cv/{userId}/…` | Uploaded CV files (runtime; not in Git) |
 
-There is **no database**. `FileStore` reads/writes JSON with a hand-rolled parser (no Jackson/Gson).
+There is **no database**. `FileStore` reads/writes JSON with a hand-rolled parser; the AI HTTP client uses Gson for provider responses.
 
 > **Security (coursework prototype):** Seed passwords in `users.json` are plaintext. New accounts use BCrypt. Change seed credentials before any public deployment.
 
@@ -272,7 +279,11 @@ There is **no database**. `FileStore` reads/writes JSON with a hand-rolled parse
 
 ## AI Integration
 
-A small, pluggable LM layer supports coursework demos. Default provider is **mock** (offline, deterministic). Set `LM_PROVIDER=openai` with `LM_BASE_URL` and `LM_API_KEY` for a real model. AI output is **advisory** — hiring decisions remain human-reviewed.
+The application calls Volcengine Ark Chat Completions from the Java server for
+AI features. The default provider is `doubao`; missing credentials produce a
+visible configuration error. Set `LM_PROVIDER=mock` explicitly for offline,
+deterministic demos and tests. AI output is **advisory** — hiring decisions
+remain human-reviewed.
 
 | Feature | Audience | Where |
 |---------|----------|-------|
@@ -289,16 +300,25 @@ A small, pluggable LM layer supports coursework demos. Default provider is **moc
 | Key | Meaning | Default |
 |-----|---------|---------|
 | `LM_ENABLED` | Master switch | `true` |
-| `LM_PROVIDER` | `mock` \| `openai` \| `custom` | `mock` |
-| `LM_API_KEY` | Bearer token for HTTP providers | *(empty)* |
-| `LM_BASE_URL` | API base URL | *(empty)* |
-| `LM_MODEL` | Model name | *(mock: `mock-model`; HTTP fallback: `gpt-4o-mini`)* |
-| `LM_TIMEOUT_MS` | HTTP timeout | `30000` |
+| `LM_PROVIDER` | `doubao` \| `mock` \| `openai` \| `custom` | `doubao` |
+| `ARK_API_KEY` | Ark API key (`LM_API_KEY` alias) | *(required for Doubao)* |
+| `ARK_MODEL` | Ark Model ID or Endpoint ID (`LM_MODEL` alias) | *(required for Doubao)* |
+| `LM_BASE_URL` | Ark API base URL | `https://ark.cn-beijing.volces.com/api/v3` for Doubao |
+| `LM_TIMEOUT_MS` | Connect and non-streaming timeout; SSE has a 180-second minimum | `30000` |
 | `LM_HTTP_CHAT_PATH` | Chat completions path | `/chat/completions` |
 
-Copy `src/main/webapp/WEB-INF/lm.properties.example` → `WEB-INF/lm.properties` for local overrides. **Never commit API keys.**
+For a local run, put the key and an enabled model ID in the Git-ignored root
+`.env`, then run `python3 tools/run-local.py`. For this project's text tasks,
+`doubao-seed-2-1-lite-260915` is a suitable ID if available to your account.
+Use an exact [Model ID](https://docs.volcengine.com/docs/ark/model-list?lang=zh),
+not the model picker's display name. This app uses the regular Ark `/api/v3`
+endpoint; [Agent/Coding Plan](https://docs.volcengine.com/docs/ark/integrate-third-party-tools?lang=zh)
+uses a different endpoint and key. **Never commit API keys.**
 
-If `LM_PROVIDER` is `openai` or `custom` but credentials are missing, the factory **falls back to `MockLmClient`**.
+For Docker Compose, the root `.env` supplies `ARK_API_KEY` and `ARK_MODEL` to
+the container. For source-based `tomcat7:run`, an optional
+`src/main/webapp/WEB-INF/lm.properties` can provide local settings. The WAR
+excludes this file.
 
 ### Key packages
 
@@ -308,7 +328,8 @@ If `LM_PROVIDER` is `openai` or `custom` but credentials are missing, the factor
 | `com.bupt.ta.service.ai` | `AiFeatureService` + feature-specific prompt builders |
 | `com.bupt.ta.util` | `AppConfig`, `HttpJsonClient` (JDK 11 `HttpClient`) |
 
-LM-related tests live under `src/test/java/com/bupt/ta/ai/` and `…/service/ai/`. Unset global `LM_*` environment variables for deterministic local test runs.
+LM-related tests live under `src/test/java/com/bupt/ta/ai/` and `…/service/ai/`.
+Unset global `ARK_*` and `LM_*` environment variables for deterministic test runs.
 
 ---
 

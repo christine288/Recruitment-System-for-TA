@@ -17,7 +17,7 @@ class ProcessedDecisionReviewServiceTest {
 
     @Test
     void buildReviewRequest_usesDecisionReviewFeature() {
-        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties(null));
+        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties("LM_PROVIDER=mock\n"));
         ProcessedDecisionReviewService svc = new ProcessedDecisionReviewService(new MockLmClient(), cfg);
         MoProcessedReviewContext ctx = new MoProcessedReviewContext();
         ctx.decisionStatus = "Accepted";

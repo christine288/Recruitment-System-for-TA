@@ -13,7 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * Admin-only interactive demo for AI feature scaffolding (mock LM by default).
+ * Admin-only interactive page for the configured AI provider (Doubao by default).
  *
  * <p><b>URL pattern:</b> {@code /admin/ai-demo}
  *
@@ -91,5 +91,6 @@ public class AiDemoServlet extends BaseServlet {
     private void attachCommonAttrs(HttpServletRequest req) {
         req.setAttribute("lmEnabled", lmConfig.isEnabled());
         req.setAttribute("lmProvider", lmConfig.getProviderType().name().toLowerCase());
+        req.setAttribute("lmModel", lmConfig.getModel());
     }
 }

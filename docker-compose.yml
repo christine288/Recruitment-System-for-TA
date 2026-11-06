@@ -14,7 +14,11 @@ services:
       SMTP_PORT: "1025"
       SMTP_FROM: noreply@bupt.local
       LM_ENABLED: "true"
-      LM_PROVIDER: mock
+      LM_PROVIDER: doubao
+      ARK_API_KEY: ${ARK_API_KEY:-}
+      ARK_MODEL: ${ARK_MODEL:-}
+      LM_API_KEY: ${LM_API_KEY:-}
+      LM_MODEL: ${LM_MODEL:-}
     volumes:
       - cvdata:/usr/local/tomcat/webapps/ta-recruitment/WEB-INF/data/cv
       - appdata:/usr/local/tomcat/webapps/ta-recruitment/WEB-INF/data

@@ -73,7 +73,7 @@ public final class ProcessedDecisionReviewService {
                 .userPrompt(buildUserPrompt(context))
                 .temperature(0.25d)
                 .maxTokens(550)
-                .model(AiLmDefaults.modelOrFallback(config))
+                .model(AiLmDefaults.configuredModel(config))
                 .build();
     }
 

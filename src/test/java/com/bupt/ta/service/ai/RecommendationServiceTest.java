@@ -15,7 +15,7 @@ class RecommendationServiceTest {
 
     @Test
     void recommendJobs_invokesMockClient() throws LmException {
-        ServletContext ctx = LmTestSupport.servletContextWithLmProperties(null);
+        ServletContext ctx = LmTestSupport.servletContextWithLmProperties("LM_PROVIDER=mock\n");
         LmConfig cfg = LmConfig.load(ctx);
         RecommendationService svc = new RecommendationService(new MockLmClient(), cfg);
         LmResponse r = svc.recommendJobs("Student profile", "Job one line\nJob two line");

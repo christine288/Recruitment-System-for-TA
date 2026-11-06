@@ -4,9 +4,12 @@ out/
 src/out/
 tomcat-base/
 *.war
+__pycache__/
 
 # Local secrets (copy from lm.properties.example)
 **/WEB-INF/lm.properties
+/.env
+/.env.local
 
 # IDE
 .idea/

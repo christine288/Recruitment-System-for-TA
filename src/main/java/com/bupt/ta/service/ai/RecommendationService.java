@@ -62,7 +62,7 @@ public final class RecommendationService {
                         + AiLmDefaults.nz(openPositions))
                 .temperature(0.35d)
                 .maxTokens(700)
-                .model(AiLmDefaults.modelOrFallback(config))
+                .model(AiLmDefaults.configuredModel(config))
                 .build();
     }
 }

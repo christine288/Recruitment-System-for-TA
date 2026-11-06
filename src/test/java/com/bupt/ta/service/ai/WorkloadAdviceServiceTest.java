@@ -14,7 +14,7 @@ class WorkloadAdviceServiceTest {
 
     @Test
     void buildAdviceRequest_usesWorkloadAdviceFeature() {
-        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties(null));
+        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties("LM_PROVIDER=mock\n"));
         WorkloadAdviceService svc = new WorkloadAdviceService(new MockLmClient(), cfg);
         MoWorkloadSnapshot snap = snapshot(4, 1, 4);
 
@@ -23,7 +23,7 @@ class WorkloadAdviceServiceTest {
 
     @Test
     void adviseMoOnWorkload_highLoadSuggestsRejectOrCaution() throws Exception {
-        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties(null));
+        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties("LM_PROVIDER=mock\n"));
         WorkloadAdviceService svc = new WorkloadAdviceService(new MockLmClient(), cfg);
 
         String text = svc.adviseMoOnWorkload(snapshot(1, 3, 4)).getText().toLowerCase();
@@ -34,7 +34,7 @@ class WorkloadAdviceServiceTest {
 
     @Test
     void adviseMoOnWorkload_lowLoadSuggestsApprove() throws Exception {
-        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties(null));
+        LmConfig cfg = LmConfig.load(LmTestSupport.servletContextWithLmProperties("LM_PROVIDER=mock\n"));
         WorkloadAdviceService svc = new WorkloadAdviceService(new MockLmClient(), cfg);
 
         String text = svc.adviseMoOnWorkload(snapshot(1, 1, 2)).getText().toLowerCase();

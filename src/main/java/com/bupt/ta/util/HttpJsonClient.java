@@ -20,6 +20,7 @@ import java.util.Map;
  * from multiple threads.
  */
 public final class HttpJsonClient {
+    private static final int MIN_STREAM_REQUEST_TIMEOUT_MS = 180_000;
 
     private HttpJsonClient() {}
 
@@ -33,7 +34,9 @@ public final class HttpJsonClient {
      * @param url       target HTTPS endpoint
      * @param headers   optional extra request headers; null keys or values are skipped
      * @param body      JSON request body; null is sent as empty string
-     * @param timeoutMs connect and request timeout in milliseconds (minimum 1,000 ms enforced)
+     * @param timeoutMs connect timeout in milliseconds (minimum 1,000 ms enforced); the
+     *                  streaming request gets at least 180,000 ms so a long response is not
+     *                  cut off by the ordinary short JSON request timeout
      * @return response body input stream on success (2xx)
      * @throws IOException          on I/O failure or non-2xx HTTP status
      * @throws InterruptedException if the HTTP send is interrupted
@@ -46,7 +49,7 @@ public final class HttpJsonClient {
                 .build();
         HttpRequest.Builder b = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .timeout(Duration.ofMillis(t))
+                .timeout(Duration.ofMillis(Math.max(t, MIN_STREAM_REQUEST_TIMEOUT_MS)))
                 .POST(HttpRequest.BodyPublishers.ofString(body == null ? "" : body, StandardCharsets.UTF_8))
                 .header("Accept", "text/event-stream")
                 .header("Content-Type", "application/json; charset=utf-8");

@@ -277,7 +277,7 @@ From this tab you can:
 | `/admin/applications/by-status?status=` | Filter applications by status |
 | `/admin/applications` | Override application status (POST) |
 | `/admin/export` | Export data |
-| `/admin/ai-demo` | AI feature demo (mock / HTTP LM scaffold) |
+| `/admin/ai-demo` | AI feature demo (Doubao via Volcengine Ark when configured) |
 
 Job deletion is handled via POST to `/admin/jobs` from the **Job Management** tab on the admin dashboard.
 
